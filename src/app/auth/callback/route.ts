@@ -13,6 +13,15 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+
+    console.error(
+      JSON.stringify({
+        event: "auth_callback_failed",
+        at: new Date().toISOString(),
+        detail: error.message,
+        status: error.status,
+      }),
+    );
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth`);

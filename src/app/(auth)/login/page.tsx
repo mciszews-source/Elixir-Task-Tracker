@@ -5,9 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(event: React.FormEvent) {
@@ -16,23 +14,17 @@ export default function LoginPage() {
     setMessage("");
 
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
+    const redirectTo = `${appUrl}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: redirectTo,
-        shouldCreateUser: false,
-      },
+      options: { emailRedirectTo: redirectTo },
     });
 
     if (error) {
       setStatus("error");
-      setMessage(
-        error.message.includes("Signups not allowed")
-          ? "This email is not invited yet. Ask Marek or Ivan for access."
-          : error.message,
-      );
+      setMessage(error.message);
       return;
     }
 
@@ -41,22 +33,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-          Elixir
+    <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-[18px] border border-white/18 bg-[rgba(18,24,62,0.98)] p-10 shadow-2xl backdrop-blur-xl">
+        <p className="font-display text-[11px] font-light tracking-[0.25em] text-white/95">
+          ELIXIR MD INC
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-slate-900">Sign in</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Invite-only access. We will email you a magic link.
+        <h1 className="mt-3 font-display text-2xl font-light tracking-wide text-white">
+          Daily Task Tracker
+        </h1>
+        <p className="mt-2 text-sm text-white/45">
+          Sign in with your invited email. We&apos;ll send a magic link.
         </p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="email" className="font-display text-[10px] tracking-widest text-white/50 uppercase">
               Email
             </label>
             <input
@@ -66,16 +57,12 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@elixir.com"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="glass-input mt-2 w-full rounded-[10px] px-4 py-3 text-sm"
             />
           </div>
 
           {message && (
-            <p
-              className={`text-sm ${
-                status === "error" ? "text-red-600" : "text-emerald-600"
-              }`}
-            >
+            <p className={`text-sm ${status === "error" ? "text-[#FF8F9A]" : "text-[#7DDFAD]"}`}>
               {message}
             </p>
           )}
@@ -83,9 +70,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={status === "loading" || status === "sent"}
-            className="w-full rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
+            className="font-display w-full rounded-[10px] border border-white/35 bg-white/18 py-3 text-xs font-semibold tracking-wider text-white transition hover:bg-white/28 disabled:opacity-50"
           >
-            {status === "loading" ? "Sending..." : "Send magic link"}
+            {status === "loading" ? "Sending…" : "Send magic link"}
           </button>
         </form>
       </div>

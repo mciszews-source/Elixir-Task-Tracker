@@ -52,6 +52,7 @@ export interface Task {
   assignee_id: string | null;
   due_date: string | null;
   is_on_board: boolean;
+  is_executive_request: boolean;
   completed_at: string | null;
   created_by: string | null;
   external_id: string | null;
@@ -111,6 +112,7 @@ export interface CreateTaskPayload {
   project_id?: string | null;
   due_date?: string | null;
   is_on_board?: boolean;
+  is_executive_request?: boolean;
 }
 
 export interface UpdateTaskPayload {

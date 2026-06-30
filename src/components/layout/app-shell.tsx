@@ -1,10 +1,29 @@
 import { Sidebar } from "@/components/layout/sidebar";
+import { ElixirHeader } from "@/components/layout/elixir-header";
+import type { UserRole } from "@/types/database";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+interface AppShellProps {
+  children: React.ReactNode;
+  role?: UserRole;
+  userName?: string;
+  headerView?: "departments" | "projects";
+}
+
+export function AppShell({
+  children,
+  role,
+  userName,
+  headerView = "departments",
+}: AppShellProps) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+    <div className="relative z-10 flex min-h-screen">
+      <Sidebar role={role} userName={userName} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <ElixirHeader view={headerView} />
+        <main className="relative z-10 flex-1 overflow-y-auto px-8 py-7">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

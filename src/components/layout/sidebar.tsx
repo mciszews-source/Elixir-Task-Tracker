@@ -2,58 +2,115 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Building2,
-  FileText,
-  FolderKanban,
-  Settings,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import type { Team } from "@/types/database";
+import type { UserRole } from "@/types/database";
+import { canManageUsers } from "@/lib/permissions";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/teams/ceo-office", label: "Teams", icon: Building2 },
-  { href: "/reports/daily", label: "Daily report", icon: FileText },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+interface SidebarProps {
+  role?: UserRole;
+  userName?: string;
+}
 
-export function Sidebar() {
+export function Sidebar({ role = "member", userName }: SidebarProps) {
   const pathname = usePathname();
 
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["teams"],
+    queryFn: async () => {
+      const res = await fetch("/api/teams");
+      const json = await res.json();
+      return json.data ?? [];
+    },
+  });
+
+  const staticLinks = [
+    { href: "/reports/daily", label: "Daily Report" },
+    { href: "/projects", label: "Projects" },
+  ];
+
   return (
-    <nav className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white px-4 py-6">
-      <div className="mb-8 px-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-          Elixir
+    <aside className="relative z-20 flex w-[220px] shrink-0 flex-col border-r border-white/10 glass-panel">
+      <div className="border-b border-white/10 px-5 py-6">
+        <p className="font-display text-[11px] font-light tracking-[0.25em] text-white/95">
+          ELIXIR MD INC
         </p>
-        <h1 className="text-lg font-semibold text-slate-900">Task Tracker</h1>
+        <p className="mt-1 font-display text-[10px] tracking-[0.2em] text-white/40 uppercase">
+          Task Tracker
+        </p>
+        {userName && (
+          <p className="mt-4 truncate text-xs text-white/50">{userName}</p>
+        )}
+        {role === "admin" && (
+          <span className="mt-1 inline-block rounded px-2 py-0.5 font-display text-[9px] tracking-widest uppercase bg-white/15 text-white/70">
+            Admin
+          </span>
+        )}
       </div>
 
-      <ul className="space-y-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+      <nav className="flex-1 overflow-y-auto px-2 py-4">
+        <p className="px-3 pb-2 font-display text-[9px] font-bold tracking-[0.2em] text-white/30 uppercase">
+          Departments
+        </p>
+        <ul className="space-y-0.5">
+          {teams.map((team) => {
+            const href = `/teams/${team.slug}`;
+            const active = pathname === href;
+            return (
+              <li key={team.id}>
+                <Link
+                  href={href}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg px-3 py-2.5 font-display text-[11px] font-medium tracking-[0.14em] uppercase transition-all",
+                    active
+                      ? "border-l-2 border-white/85 bg-white/12 text-white"
+                      : "border-l-2 border-transparent text-white/45 hover:bg-white/8 hover:text-white/80",
+                  )}
+                >
+                  {team.name}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
 
-          return (
+        <p className="mt-6 px-3 pb-2 font-display text-[9px] font-bold tracking-[0.2em] text-white/30 uppercase">
+          Tools
+        </p>
+        <ul className="space-y-0.5">
+          {staticLinks.map(({ href, label }) => (
             <li key={href}>
               <Link
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  "block rounded-lg px-3 py-2.5 font-display text-[11px] font-medium tracking-[0.14em] uppercase transition-all",
+                  pathname.startsWith(href)
+                    ? "bg-white/12 text-white"
+                    : "text-white/45 hover:bg-white/8 hover:text-white/80",
                 )}
               >
-                <Icon className="h-4 w-4" />
                 {label}
               </Link>
             </li>
-          );
-        })}
-      </ul>
-    </nav>
+          ))}
+          {canManageUsers(role) && (
+            <li>
+              <Link
+                href="/admin/users"
+                className={cn(
+                  "block rounded-lg px-3 py-2.5 font-display text-[11px] font-medium tracking-[0.14em] uppercase transition-all",
+                  pathname.startsWith("/admin")
+                    ? "bg-white/12 text-white"
+                    : "text-white/45 hover:bg-white/8 hover:text-white/80",
+                )}
+              >
+                Team Access
+              </Link>
+            </li>
+          )}
+        </ul>
+      </nav>
+    </aside>
   );
 }

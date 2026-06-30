@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -24,8 +24,13 @@ import type {
   Team,
   UserRole,
 } from "@/types/database";
-import { ElixirTaskRow } from "@/components/tracker/elixir-task-row";
+import {
+  ElixirTaskRow,
+  type TaskEditPayload,
+} from "@/components/tracker/elixir-task-row";
 import { EodStrip } from "@/components/tracker/eod-strip";
+import { DatePickerPopover } from "@/components/ui/date-picker-popover";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { canReprioritizeTeam } from "@/lib/permissions";
 
 interface TeamTrackerProps {
@@ -38,22 +43,26 @@ function SortableRow({
   task,
   rank,
   canEdit,
+  editing,
   handlers,
 }: {
   task: TaskWithRelations;
   rank: number;
   canEdit: boolean;
+  editing: boolean;
   handlers: {
     onToggleDone: () => void;
-    onEdit: () => void;
-    onDelete: () => void;
+    onStartEdit: () => void;
+    onCancelEdit: () => void;
+    onSaveEdit: (p: TaskEditPayload) => void;
+    onRequestDelete: () => void;
     onMoveUp: () => void;
     onMoveDown: () => void;
     onPriorityChange: (p: TaskPriority) => void;
   };
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id, disabled: !canEdit });
+    useSortable({ id: task.id, disabled: !canEdit || editing });
 
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
@@ -62,6 +71,7 @@ function SortableRow({
         rank={rank}
         isDragging={isDragging}
         canEdit={canEdit}
+        editing={editing}
         dragHandleProps={{ ...attributes, ...listeners }}
         {...handlers}
       />
@@ -69,16 +79,57 @@ function SortableRow({
   );
 }
 
+const COLLAPSE_STORAGE = "elixir_completed_collapsed_v1";
+
+function loadCollapsedMap(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(COLLAPSE_STORAGE);
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCollapsedMap(map: Record<string, boolean>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(COLLAPSE_STORAGE, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
   const queryClient = useQueryClient();
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   const [newTitle, setNewTitle] = useState("");
   const [newRisk, setNewRisk] = useState("");
   const [newPriority, setNewPriority] = useState<TaskPriority>("high");
-  const [newDue, setNewDue] = useState(new Date().toISOString().slice(0, 10));
+  const [newDue, setNewDue] = useState(todayStr);
   const [executiveFlag, setExecutiveFlag] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(true);
 
-  const canEdit = canReprioritizeTeam(role, userTeamIds, team.id) || role === "member";
+  // Per-tab persistent collapse state.
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setCollapsedMap(loadCollapsedMap());
+  }, []);
+  const completedCollapsed = collapsedMap[team.slug] ?? false;
+  function toggleCompleted() {
+    const next = { ...collapsedMap, [team.slug]: !completedCollapsed };
+    setCollapsedMap(next);
+    saveCollapsedMap(next);
+  }
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TaskWithRelations | null>(null);
+
+  const canEdit =
+    canReprioritizeTeam(role, userTeamIds, team.id) ||
+    role === "member" ||
+    role === "admin" ||
+    role === "executive";
 
   const { data, isLoading } = useQuery({
     queryKey: ["team-tasks", team.id],
@@ -99,8 +150,8 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           team_id: team.id,
-          title: newTitle,
-          description: newRisk,
+          title: newTitle.trim(),
+          description: newRisk.trim(),
           priority: newPriority,
           due_date: newDue,
           is_on_board: true,
@@ -113,6 +164,7 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
     onSuccess: () => {
       setNewTitle("");
       setNewRisk("");
+      setExecutiveFlag(false);
       invalidate();
     },
   });
@@ -123,6 +175,9 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
       status?: string;
       priority?: TaskPriority;
       title?: string;
+      description?: string;
+      due_date?: string;
+      is_executive_request?: boolean;
     }) => {
       const { id, ...updates } = body;
       const res = await fetch(`/api/tasks/${id}`, {
@@ -166,7 +221,7 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
   const counts = { critical: 0, high: 0, medium: 0, low: 0 };
   active.forEach((t) => counts[t.priority]++);
   const overdue = active.filter(
-    (t) => t.due_date && t.due_date < new Date().toISOString().slice(0, 10),
+    (t) => t.due_date && t.due_date < todayStr,
   ).length;
 
   const sensors = useSensors(
@@ -204,8 +259,40 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
     });
   }
 
+  function handlersFor(task: TaskWithRelations) {
+    return {
+      onToggleDone: () =>
+        patchTask.mutate({
+          id: task.id,
+          status: task.status === "done" ? "open" : "done",
+        }),
+      onStartEdit: () => setEditingId(task.id),
+      onCancelEdit: () => setEditingId(null),
+      onSaveEdit: (p: TaskEditPayload) => {
+        patchTask.mutate({
+          id: task.id,
+          title: p.title,
+          description: p.description,
+          due_date: p.due_date,
+          priority: p.priority,
+          is_executive_request: p.is_executive_request,
+        });
+        setEditingId(null);
+      },
+      onRequestDelete: () => setPendingDelete(task),
+      onMoveUp: () => moveTask(task.id, -1),
+      onMoveDown: () => moveTask(task.id, 1),
+      onPriorityChange: (p: TaskPriority) =>
+        patchTask.mutate({ id: task.id, priority: p }),
+    };
+  }
+
   if (isLoading) {
-    return <p className="font-display text-sm tracking-widest text-white/30">Loading…</p>;
+    return (
+      <p className="font-display text-[12px] tracking-widest text-white/30 uppercase">
+        Loading…
+      </p>
+    );
   }
 
   return (
@@ -218,14 +305,11 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
             placeholder="New task…"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && newTitle && createTask.mutate()}
+            onKeyDown={(e) =>
+              e.key === "Enter" && newTitle.trim() && createTask.mutate()
+            }
           />
-          <input
-            type="date"
-            className="glass-input elixir-date rounded-[10px] px-3 py-[11px] text-sm"
-            value={newDue}
-            onChange={(e) => setNewDue(e.target.value)}
-          />
+          <DatePickerPopover value={newDue} onChange={setNewDue} />
           <select
             className="elixir-select w-[140px] rounded-[10px] px-3 py-[11px] text-sm"
             value={newPriority}
@@ -254,8 +338,8 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
           </label>
           <button
             type="button"
-            onClick={() => newTitle && createTask.mutate()}
-            disabled={!newTitle || createTask.isPending}
+            onClick={() => newTitle.trim() && createTask.mutate()}
+            disabled={!newTitle.trim() || createTask.isPending}
             className="elixir-btn elixir-btn-primary"
           >
             {createTask.isPending ? "Adding…" : "+ Add"}
@@ -284,7 +368,7 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
 
       {/* Active tasks */}
       {active.length === 0 ? (
-        <p className="py-12 text-center font-display text-[13px] tracking-widest text-white/25">
+        <p className="font-display py-12 text-center text-[13px] tracking-widest text-white/25">
           NO TASKS — ADD ONE ABOVE
         </p>
       ) : (
@@ -297,20 +381,8 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
                   task={task}
                   rank={i + 1}
                   canEdit={canEdit}
-                  handlers={{
-                    onToggleDone: () =>
-                      patchTask.mutate({ id: task.id, status: "done" }),
-                    onEdit: () => {
-                      const title = prompt("Task name", task.title);
-                      if (title) patchTask.mutate({ id: task.id, title });
-                    },
-                    onDelete: () => {
-                      if (confirm("Delete this task?")) deleteTask.mutate(task.id);
-                    },
-                    onMoveUp: () => moveTask(task.id, -1),
-                    onMoveDown: () => moveTask(task.id, 1),
-                    onPriorityChange: (p) => patchTask.mutate({ id: task.id, priority: p }),
-                  }}
+                  editing={editingId === task.id}
+                  handlers={handlersFor(task)}
                 />
               ))}
             </div>
@@ -323,12 +395,12 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
         <>
           <button
             type="button"
-            onClick={() => setShowCompleted(!showCompleted)}
+            onClick={toggleCompleted}
             className="mt-6 mb-3 flex w-full items-center gap-3"
           >
             <div className="h-px flex-1 bg-white/10" />
             <span className="font-display flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-white/30">
-              <span className={showCompleted ? "" : "-rotate-90"}>▾</span>
+              <span className={completedCollapsed ? "-rotate-90" : ""}>▾</span>
               COMPLETED
               <span className="rounded-[10px] border border-[rgba(61,184,122,0.25)] bg-[rgba(61,184,122,0.15)] px-2 py-0.5 text-[10px] text-[rgba(61,184,122,0.7)]">
                 {done.length}
@@ -336,7 +408,7 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
             </span>
             <div className="h-px flex-1 bg-white/10" />
           </button>
-          {showCompleted && (
+          {!completedCollapsed && (
             <div className="flex flex-col gap-2">
               {done.map((task, i) => (
                 <ElixirTaskRow
@@ -344,9 +416,14 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
                   task={task}
                   rank={i + 1}
                   canEdit={canEdit}
-                  onToggleDone={() => patchTask.mutate({ id: task.id, status: "open" })}
-                  onEdit={() => {}}
-                  onDelete={() => deleteTask.mutate(task.id)}
+                  editing={false}
+                  onToggleDone={() =>
+                    patchTask.mutate({ id: task.id, status: "open" })
+                  }
+                  onStartEdit={() => {}}
+                  onCancelEdit={() => {}}
+                  onSaveEdit={() => {}}
+                  onRequestDelete={() => setPendingDelete(task)}
                   onMoveUp={() => {}}
                   onMoveDown={() => {}}
                   onPriorityChange={() => {}}
@@ -358,6 +435,22 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
       )}
 
       <EodStrip teamName={team.name} tasks={[...active, ...done]} />
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete task?"
+        detail={pendingDelete?.title}
+        confirmLabel="Delete"
+        variant="danger"
+        icon="🗑"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) {
+            deleteTask.mutate(pendingDelete.id);
+            setPendingDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

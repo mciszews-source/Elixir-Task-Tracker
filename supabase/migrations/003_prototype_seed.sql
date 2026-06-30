@@ -1,6 +1,6 @@
 -- 003_prototype_seed.sql
 -- Brings the live DB to parity with docs/elixir-task-tracker_4.html.
--- Idempotent: safe to re-run. All inserts use ON CONFLICT.
+-- Idempotent: safe to re-run. Uses WHERE NOT EXISTS (no ON CONFLICT — avoids PG 42P10 on partial indexes).
 --
 -- What this does:
 --   1. Adds project_phases + phase_docs tables (for the legacy Projects view)
@@ -23,10 +23,6 @@ CREATE TABLE IF NOT EXISTS project_phases (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS project_phases_external_id_uidx
-  ON project_phases (external_id)
-  WHERE external_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS phase_docs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,51 +54,57 @@ CREATE POLICY "Admins write docs"
   USING (is_admin()) WITH CHECK (is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 2. Unique index on tasks.external_id (used as idempotency key below)
--- ─────────────────────────────────────────────────────────────────────────
-CREATE UNIQUE INDEX IF NOT EXISTS tasks_external_id_uidx
-  ON tasks (external_id)
-  WHERE external_id IS NOT NULL;
-
--- ─────────────────────────────────────────────────────────────────────────
--- 3. Projects gain an icon + slug column (legacy ✦ ◎ ⬡)
---    UNIQUE on slug so ON CONFLICT (slug) works (partial indexes need WHERE in ON CONFLICT)
+-- 2–3. Schema extras for prototype projects/tasks
 -- ─────────────────────────────────────────────────────────────────────────
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS slug TEXT;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conrelid = 'public.projects'::regclass
-      AND conname = 'projects_slug_key'
-  ) THEN
-    ALTER TABLE projects ADD CONSTRAINT projects_slug_key UNIQUE (slug);
-  END IF;
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+-- Optional uniqueness helpers (not required for WHERE NOT EXISTS inserts)
+CREATE UNIQUE INDEX IF NOT EXISTS tasks_external_id_uidx
+  ON tasks (external_id)
+  WHERE external_id IS NOT NULL;
 
--- Keep partial index for lookups (optional; constraint above powers ON CONFLICT)
+CREATE UNIQUE INDEX IF NOT EXISTS project_phases_external_id_uidx
+  ON project_phases (external_id)
+  WHERE external_id IS NOT NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_uidx
   ON projects (slug)
   WHERE slug IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 4. Upsert the 6 prototype teams (slug is unique → safe to re-run)
+-- 4. Upsert the 6 prototype teams
 -- ─────────────────────────────────────────────────────────────────────────
-INSERT INTO teams (name, slug, color, sort_order) VALUES
-  ('Operations', 'operations', '#7c3aed', 1),
-  ('Marketing',  'marketing',  '#4A78C4', 2),
-  ('Sales',      'sales',      '#3DB87A', 3),
-  ('Ewan',       'ewan',       '#E8A840', 4),
-  ('Max',        'max',        '#4AAAC4', 5),
-  ('Marek Jr.',  'marek_jr_',  '#9ABCF0', 6)
-ON CONFLICT (slug) DO UPDATE SET
-  name = EXCLUDED.name,
-  color = EXCLUDED.color,
-  sort_order = EXCLUDED.sort_order;
+WITH team_seed(name, slug, color, sort_order) AS (
+  VALUES
+    ('Operations', 'operations', '#7c3aed', 1),
+    ('Marketing',  'marketing',  '#4A78C4', 2),
+    ('Sales',      'sales',      '#3DB87A', 3),
+    ('Ewan',       'ewan',       '#E8A840', 4),
+    ('Max',        'max',        '#4AAAC4', 5),
+    ('Marek Jr.',  'marek_jr_',  '#9ABCF0', 6)
+)
+UPDATE teams t
+SET
+  name = s.name,
+  color = s.color,
+  sort_order = s.sort_order
+FROM team_seed s
+WHERE t.slug = s.slug;
+
+WITH team_seed(name, slug, color, sort_order) AS (
+  VALUES
+    ('Operations', 'operations', '#7c3aed', 1),
+    ('Marketing',  'marketing',  '#4A78C4', 2),
+    ('Sales',      'sales',      '#3DB87A', 3),
+    ('Ewan',       'ewan',       '#E8A840', 4),
+    ('Max',        'max',        '#4AAAC4', 5),
+    ('Marek Jr.',  'marek_jr_',  '#9ABCF0', 6)
+)
+INSERT INTO teams (name, slug, color, sort_order)
+SELECT s.name, s.slug, s.color, s.sort_order
+FROM team_seed s
+WHERE NOT EXISTS (SELECT 1 FROM teams t WHERE t.slug = s.slug);
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 5. Insert the 69 prototype tasks (DEFAULT_TASKS)
@@ -203,19 +205,39 @@ SELECT
   'legacy:' || s.legacy_id
 FROM seed s
 JOIN team_map tm ON tm.slug = s.slug
-ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1 FROM tasks t
+  WHERE t.external_id = 'legacy:' || s.legacy_id::text
+);
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 6. Insert the 3 prototype projects (DEFAULT_PROJECTS)
 -- ─────────────────────────────────────────────────────────────────────────
+WITH project_seed(slug, name, description, status, icon) AS (
+  VALUES
+    ('astralx', 'Astral X', 'Astral X product development', 'active', '✦'),
+    ('clear',   'Clear',    'Clear initiative',              'active', '◎'),
+    ('eva3d',   'EVA 3D',   'EVA 3D rollout',                'active', '⬡')
+)
+UPDATE projects p
+SET
+  name = s.name,
+  description = s.description,
+  status = s.status::project_status,
+  icon = s.icon
+FROM project_seed s
+WHERE p.slug = s.slug;
+
+WITH project_seed(slug, name, description, status, icon) AS (
+  VALUES
+    ('astralx', 'Astral X', 'Astral X product development', 'active', '✦'),
+    ('clear',   'Clear',    'Clear initiative',              'active', '◎'),
+    ('eva3d',   'EVA 3D',   'EVA 3D rollout',                'active', '⬡')
+)
 INSERT INTO projects (slug, name, description, status, icon)
-VALUES
-  ('astralx', 'Astral X', 'Astral X product development', 'active', '✦'),
-  ('clear',   'Clear',    'Clear initiative',              'active', '◎'),
-  ('eva3d',   'EVA 3D',   'EVA 3D rollout',                'active', '⬡')
-ON CONFLICT (slug) DO UPDATE SET
-  name = EXCLUDED.name,
-  icon = EXCLUDED.icon;
+SELECT s.slug, s.name, s.description, s.status::project_status, s.icon
+FROM project_seed s
+WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.slug = s.slug);
 
 -- 6b. Phases for those projects (idempotent on external_id)
 WITH proj_map AS (
@@ -257,7 +279,10 @@ INSERT INTO project_phases (project_id, name, done, sort_order, external_id)
 SELECT pm.id, ps.name, ps.done, ps.sort_order, 'legacy:' || ps.legacy_id
 FROM phase_seed ps
 JOIN proj_map pm ON pm.slug = ps.proj_slug
-ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1 FROM project_phases pp
+  WHERE pp.external_id = 'legacy:' || ps.legacy_id
+);
 
 -- Enable realtime for the new tables (best-effort; safe if already added)
 DO $$

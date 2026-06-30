@@ -18,10 +18,32 @@ Run `PASTE_000_verify.sql` first if unsure; it reports `done = true/false` for e
 
 Or run 003 in four smaller steps if debugging:
 
-- `PASTE_003a_tables.sql` — `project_phases`, indexes
-- `PASTE_003b_teams.sql` — 6 teams
-- `PASTE_003c_tasks.sql` — 69 tasks
+- `PASTE_003a_tables.sql` — `project_phases`, indexes (**RLS warning appears here — see below**)
+- `PASTE_003b_teams.sql` — 6 teams (run before 003c)
+- `PASTE_003c_tasks.sql` — 69 tasks (no tables created; no RLS dialog)
 - `PASTE_003d_projects.sql` — 3 projects + 29 phases
+
+### Supabase “Row Level Security” popup
+
+When running **003a** (or the full **003_seed**), Supabase may warn:
+
+> This query creates a table without enabling Row Level Security…
+
+**Click `Run without RLS`** — not “Run and enable RLS”.
+
+Our scripts **already** run `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and create policies in the same file. “Run and enable RLS” can interfere with that and cause confusing failures on later steps.
+
+**003c does not create tables.** If you see the RLS popup on 003c, you may have leftover SQL from 003a in the editor — clear the editor and paste only the 003c file.
+
+### Strict order for split 003
+
+| Step | File | Skip if |
+|------|------|---------|
+| — | `PASTE_002_policies.sql` | `is_executive_request` column exists |
+| a | `PASTE_003a_tables.sql` | `project_phases` table exists |
+| b | `PASTE_003b_teams.sql` | 6 prototype teams exist |
+| c | `PASTE_003c_tasks.sql` | `legacy_task_count` is 69 |
+| d | `PASTE_003d_projects.sql` | 29 phases exist |
 
 ## Raw GitHub URLs (copy from browser, not chat)
 

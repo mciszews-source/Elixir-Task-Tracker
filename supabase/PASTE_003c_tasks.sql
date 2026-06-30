@@ -1,3 +1,17 @@
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'is_executive_request'
+  ) THEN
+    RAISE EXCEPTION 'Run PASTE_002_policies.sql first (missing tasks.is_executive_request).';
+  END IF;
+  IF (SELECT count(*) FROM teams WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_')) < 6 THEN
+    RAISE EXCEPTION 'Run PASTE_003b_teams.sql first (need 6 prototype teams, found %).',
+      (SELECT count(*) FROM teams WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_'));
+  END IF;
+END $$;
+
 WITH team_map AS (
   SELECT slug, id FROM teams
   WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_')
@@ -97,3 +111,7 @@ WHERE NOT EXISTS (
   SELECT 1 FROM tasks t
   WHERE t.external_id = 'legacy:' || s.legacy_id::text
 );
+
+SELECT count(*) AS legacy_task_count
+FROM tasks
+WHERE external_id LIKE 'legacy:%';

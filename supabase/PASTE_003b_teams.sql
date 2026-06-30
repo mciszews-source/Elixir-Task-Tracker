@@ -28,3 +28,7 @@ INSERT INTO teams (name, slug, color, sort_order)
 SELECT s.name, s.slug, s.color, s.sort_order
 FROM team_seed s
 WHERE NOT EXISTS (SELECT 1 FROM teams t WHERE t.slug = s.slug);
+
+SELECT count(*) AS prototype_team_count
+FROM teams
+WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_');

@@ -80,3 +80,6 @@ BEGIN
   END;
 END $$;
 
+SELECT count(*) AS legacy_phase_count
+FROM project_phases
+WHERE external_id LIKE 'legacy:%';

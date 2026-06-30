@@ -4,7 +4,17 @@ import { updateSession } from "@/lib/supabase/middleware";
 const PUBLIC_ROUTES = ["/login", "/auth/callback"];
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Supabase may redirect to Site URL root with ?code= instead of /auth/callback.
+  if (
+    pathname !== "/auth/callback" &&
+    (searchParams.has("code") || searchParams.has("token_hash"))
+  ) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
 
   const response = await updateSession(request);
 

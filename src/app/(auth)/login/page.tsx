@@ -22,6 +22,7 @@ function displayApiError(error: unknown, fallback: string): string {
 function LoginForm() {
   const searchParams = useSearchParams();
   const callbackError = searchParams.get("error");
+  const callbackDetail = searchParams.get("detail");
 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>(
@@ -29,7 +30,9 @@ function LoginForm() {
   );
   const [message, setMessage] = useState(
     callbackError === "auth"
-      ? "Sign-in link expired or invalid. Request a new magic link."
+      ? callbackDetail
+        ? `Sign-in failed: ${callbackDetail}`
+        : "Sign-in link expired or invalid. Request a new magic link."
       : "",
   );
   const [errorCode, setErrorCode] = useState<string | null>(

@@ -4,24 +4,29 @@ import { updateSession } from "@/lib/supabase/middleware";
 const PUBLIC_ROUTES = ["/login", "/auth/callback"];
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
-  const response = await updateSession(request);
+  // Supabase may redirect to Site URL root with ?code= instead of /auth/callback.
+  if (
+    pathname !== "/auth/callback" &&
+    (searchParams.has("code") || searchParams.has("token_hash"))
+  ) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
+  const { response, user } = await updateSession(request);
 
   const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 
   if (isPublic) return response;
 
-  // In MVP dev without Supabase configured, allow dashboard access
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return response;
   }
 
-  const hasSession = request.cookies
-    .getAll()
-    .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
-
-  if (!hasSession && !isPublic) {
+  if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("redirect", pathname);

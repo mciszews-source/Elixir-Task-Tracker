@@ -6,9 +6,23 @@ import { AUTH_DELIVERY_ADMIN_NOTE } from "@/lib/auth/constants";
 
 type Status = "idle" | "loading" | "sent" | "error";
 
+function displayApiError(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    if (typeof record.message === "string" && record.message.trim()) {
+      return record.message;
+    }
+    const serialized = JSON.stringify(error, null, 2);
+    if (serialized && serialized !== "{}") return serialized;
+  }
+  return fallback;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const callbackError = searchParams.get("error");
+  const callbackDetail = searchParams.get("detail");
 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>(
@@ -16,7 +30,9 @@ function LoginForm() {
   );
   const [message, setMessage] = useState(
     callbackError === "auth"
-      ? "Sign-in link expired or invalid. Request a new magic link."
+      ? callbackDetail
+        ? `Sign-in failed: ${callbackDetail}`
+        : "Sign-in link expired or invalid. Request a new magic link."
       : "",
   );
   const [errorCode, setErrorCode] = useState<string | null>(
@@ -46,7 +62,7 @@ function LoginForm() {
       const payload = (await res.json()) as {
         ok?: boolean;
         message?: string;
-        error?: string;
+        error?: unknown;
         code?: string;
         adminNote?: string;
         redirectTo?: string;
@@ -64,9 +80,16 @@ function LoginForm() {
           redirectTo: payload.redirectTo,
         });
         setStatus("error");
-        setMessage(payload.error ?? "Could not send magic link.");
+        setMessage(
+          displayApiError(payload.error, "Could not send magic link."),
+        );
         setErrorCode(payload.code ?? "unknown");
-        setAdminNote(payload.adminNote ?? AUTH_DELIVERY_ADMIN_NOTE);
+        setAdminNote(
+          payload.adminNote ??
+            (payload.code === "smtp_error" || payload.code === "supabase_error"
+              ? AUTH_DELIVERY_ADMIN_NOTE
+              : null),
+        );
         return;
       }
 
@@ -117,7 +140,7 @@ function LoginForm() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@elixir-md.com"
+              placeholder="yourgmail@gmail.com"
               className="glass-input mt-2 w-full rounded-[10px] px-4 py-3 text-sm"
             />
           </div>

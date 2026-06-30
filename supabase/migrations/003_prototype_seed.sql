@@ -1,4 +1,7 @@
 -- 003_prototype_seed.sql
+-- RUN THE ENTIRE FILE (copy from GitHub repo file, not chat).
+-- Requires 001_initial_schema.sql + 002_executive_flag_and_admin_policies.sql first.
+--
 -- Brings the live DB to parity with docs/elixir-task-tracker_4.html.
 -- Idempotent: safe to re-run. Uses WHERE NOT EXISTS (no ON CONFLICT — avoids PG 42P10 on partial indexes).
 --
@@ -122,7 +125,7 @@ seed(legacy_id, slug, title, description, priority, due_date, from_ewan, status,
   (5, 'marketing', 'Marketing Plan and Materials for Dr. Shararah', 'Relationship Management', 'high', '2026-06-10'::date, false, 'open', NULL, 100),
   (42, 'marketing', 'Outstanding needs from Dr. Kassir and Scheila', 'Important relationship', 'high', '2026-06-09'::date, false, 'open', NULL, 200),
   (58, 'marketing', 'Finish Branding For AstralX', '', 'high', '2026-06-12'::date, false, 'open', NULL, 300),
-  (6, 'marketing', 'Coordinate Omar Hussein’s EVA announcement', 'EVA marketing', 'medium', '2026-06-09'::date, false, 'open', NULL, 400),
+  (6, 'marketing', 'Coordinate Omar Husseins EVA announcement', 'EVA marketing', 'medium', '2026-06-09'::date, false, 'open', NULL, 400),
   (9, 'sales', 'Kristy Hamilton EVA', '', 'medium', '2026-06-15'::date, false, 'open', NULL, 100),
   (10, 'ewan', 'Follow Up with Executives about the proposal for Face Cairo', 'He must have time to look at it at least one day prior to meeting.', 'critical', '2026-06-08'::date, false, 'done', now(), 100),
   (25, 'ewan', 'Make sure Kevin Tehrani signs today', 'We need the money', 'critical', '2026-06-08'::date, false, 'done', now(), 200),
@@ -149,7 +152,7 @@ seed(legacy_id, slug, title, description, priority, due_date, from_ewan, status,
   (61, 'ewan', 'AstralX website', '', 'high', '2026-06-12'::date, false, 'open', NULL, 2300),
   (30, 'ewan', 'Schedule meeting with Dr. Rubinstein', 'Very important relationship', 'medium', '2026-06-10'::date, false, 'open', NULL, 2400),
   (35, 'ewan', 'Dr. Sarah follow up', 'Maintain relationship', 'medium', '2026-06-10'::date, false, 'done', now(), 2500),
-  (38, 'ewan', 'Coordinate Omar Hussein’s EVA announcement', 'EVA marketing', 'medium', '2026-06-08'::date, false, 'open', NULL, 2600),
+  (38, 'ewan', 'Coordinate Omar Husseins EVA announcement', 'EVA marketing', 'medium', '2026-06-08'::date, false, 'open', NULL, 2600),
   (39, 'ewan', 'Provide George Bitar with the EVA information he requested', 'Potential EVA Sale', 'medium', '2026-06-12'::date, false, 'open', NULL, 2700),
   (47, 'ewan', 'Contact Michelle for East Coast machine building', '', 'medium', '2026-06-12'::date, false, 'open', NULL, 2800),
   (73, 'max', 'Update lead list', '', 'critical', '2026-06-18'::date, false, 'open', NULL, 100),

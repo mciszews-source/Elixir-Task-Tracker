@@ -3,9 +3,9 @@ WITH team_map AS (
 ),
 seed(legacy_id, slug, title, description, priority, due_date, from_ewan, status, completed_at, sort_order) AS (
   VALUES
-  (68, 'marek_jr_', $t68$Roxium Execution System plus Dashboard$t68$, '', 'high', '2026-06-19'::date, false, 'open', NULL, 100),
-  (69, 'marek_jr_', $t69$EVA 3D - Marketing Execution System$t69$, '', 'high', '2026-06-26'::date, false, 'open', NULL, 200),
-  (70, 'marek_jr_', $t70$Dr. Kristy Hamilton - First Marketing Deliveries$t70$, '', 'high', '2026-06-19'::date, false, 'open', NULL, 300)
+  (68, 'marek_jr_', $t68$Roxium Execution System plus Dashboard$t68$, '', 'high', '2026-06-19'::date, false, 'open', NULL::timestamptz, 100),
+  (69, 'marek_jr_', $t69$EVA 3D - Marketing Execution System$t69$, '', 'high', '2026-06-26'::date, false, 'open', NULL::timestamptz, 200),
+  (70, 'marek_jr_', $t70$Dr. Kristy Hamilton - First Marketing Deliveries$t70$, '', 'high', '2026-06-19'::date, false, 'open', NULL::timestamptz, 300)
 )
 INSERT INTO tasks (
   team_id, title, description, priority, due_date,
@@ -20,7 +20,7 @@ SELECT
   s.due_date,
   s.from_ewan,
   s.status::task_status,
-  s.completed_at,
+  s.completed_at::timestamptz,
   s.sort_order,
   true,
   ('legacy:' || s.legacy_id::text)

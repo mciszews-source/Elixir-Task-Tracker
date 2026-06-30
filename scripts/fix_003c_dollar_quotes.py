@@ -29,6 +29,7 @@ def convert_row(line: str) -> str:
     desc_m = re.match(r"'((?:''|[^'])*)',\s*", rest)
     desc = desc_m.group(1).replace("''", "'")
     rest = rest[desc_m.end() :]
+    rest = re.sub(r"'(open|done)',\s*NULL,", r"'\1', NULL::timestamptz,", rest)
     lid = m.group(1)
     return (
         f"({lid}, '{slug}', {dq('t' + lid, title)}, {dq('d' + lid, desc)}, {rest}"
@@ -47,7 +48,7 @@ SELECT
   s.due_date,
   s.from_ewan,
   s.status::task_status,
-  s.completed_at,
+  s.completed_at::timestamptz,
   s.sort_order,
   true,
   ('legacy:' || s.legacy_id::text)

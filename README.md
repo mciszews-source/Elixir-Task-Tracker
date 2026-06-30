@@ -10,7 +10,7 @@ Internal leadership dashboard for cross-team task visibility, drag-and-drop prio
 | [Prototype Analysis](docs/PROTOTYPE_ANALYSIS.md) | Inferred features from HTML prototype |
 | [Architecture](docs/ARCHITECTURE.md) | Stack, schema, API plan, integrations |
 | [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Sprint-by-sprint build plan |
-| [UI/UX Recommendations](docs/UI_UX_RECOMMENDATIONS.md) | Executive-focused design system |
+| [Setup Guide](docs/SETUP_GUIDE.md) | Supabase + Cloudflare step-by-step |
 
 ## Stack
 

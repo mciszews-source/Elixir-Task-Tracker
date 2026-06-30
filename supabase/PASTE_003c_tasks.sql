@@ -1,14 +1,16 @@
 DO $$
+DECLARE team_count int;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'is_executive_request'
   ) THEN
-    RAISE EXCEPTION 'Run PASTE_002_policies.sql first (missing tasks.is_executive_request).';
+    RAISE EXCEPTION 'Run PASTE_002_policies.sql first.';
   END IF;
-  IF (SELECT count(*) FROM teams WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_')) < 6 THEN
-    RAISE EXCEPTION 'Run PASTE_003b_teams.sql first (need 6 prototype teams, found %).',
-      (SELECT count(*) FROM teams WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_'));
+  SELECT count(*) INTO team_count FROM teams
+    WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_');
+  IF team_count < 6 THEN
+    RAISE EXCEPTION 'Run PASTE_003b_teams.sql first. Found % teams.', team_count;
   END IF;
 END $$;
 

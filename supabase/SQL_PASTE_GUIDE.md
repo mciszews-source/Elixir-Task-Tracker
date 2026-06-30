@@ -8,13 +8,23 @@ Do **not** copy SQL from chat — dashes and quotes often get corrupted on paste
 | Step | File | What it does |
 |------|------|----------------|
 | 0 | `PASTE_000_verify.sql` | Shows what is already done and what to run next |
-| 1 | `PASTE_001_schema.sql` | Core tables, RLS, triggers (**one-time only**) |
+| 0b | `PASTE_001_status.sql` | Run if unsure whether 001 is needed |
+| 1 | `PASTE_001_schema.sql` | Core tables (**only on empty DB — skip if `user_role` exists**) |
 | 2 | `PASTE_002_policies.sql` | Executive flag + admin policies (safe to re-run) |
-| 3 | `PASTE_003_seed.sql` | Prototype teams, tasks, projects (idempotent) |
+| 3 | `PASTE_003_seed.sql` | All seed data in one file (or use split 003a–d below) |
 
-**Already ran 001 before?** Skip it. Error `type "user_role" already exists` means 001 succeeded earlier — go straight to 002, then 003.
+**001 error `user_role already exists`?** That means 001 already ran. **Do not run 001 again.** Run `PASTE_001_status.sql` to confirm.
 
-Run `PASTE_000_verify.sql` first if unsure; it reports `done = true/false` for each step.
+### If `PASTE_003c_tasks.sql` fails — use smaller files
+
+Run in order (clear editor between each):
+
+1. `PASTE_003c1_ops_mkt_sales.sql` — 8 tasks
+2. `PASTE_003c2_ewan.sql` — 28 tasks
+3. `PASTE_003c3_max.sql` — 30 tasks
+4. `PASTE_003c4_marek.sql` — 3 tasks
+
+Each file ends with a per-team task count. Total should reach **69**.
 
 Or run 003 in four smaller steps if debugging:
 

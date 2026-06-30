@@ -52,7 +52,7 @@ export function EodStrip({ teamName, tasks }: EodStripProps) {
 
   return (
     <div className="mt-7">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-white/12 bg-[rgba(33,38,76,0.5)] px-5 py-4 backdrop-blur-md">
+      <div className="glass-panel-strong flex flex-wrap items-center justify-between gap-3 rounded-[14px] px-5 py-4">
         <span className="font-display text-[11px] tracking-[0.2em] text-white/45 uppercase">
           End-of-day brief · share with Ewan before close of business
         </span>
@@ -60,14 +60,14 @@ export function EodStrip({ teamName, tasks }: EodStripProps) {
           <button
             type="button"
             onClick={() => setPreview(!preview)}
-            className="font-display rounded-lg border border-white/20 bg-white/8 px-4 py-2 text-[11px] font-semibold tracking-wider text-white/70 uppercase transition hover:bg-white/16 hover:text-white"
+            className="elixir-btn"
           >
             Preview
           </button>
           <button
             type="button"
             onClick={copyBrief}
-            className="font-display rounded-lg border border-white/35 bg-white/18 px-4 py-2 text-[11px] font-semibold tracking-wider text-white uppercase transition hover:bg-white/28"
+            className="elixir-btn elixir-btn-primary"
           >
             {copied ? "✓ Copied" : "Copy Brief"}
           </button>
@@ -75,23 +75,34 @@ export function EodStrip({ teamName, tasks }: EodStripProps) {
       </div>
 
       {preview && (
-        <div className="mt-3 rounded-xl border border-white/10 bg-[rgba(33,38,76,0.6)] px-5 py-4 text-sm leading-8 text-white/60">
+        <div className="glass-panel-deep mt-3 rounded-xl px-5 py-4 text-sm leading-7 text-white/60">
           <p className="mb-3 font-display text-[11px] tracking-[0.2em] text-white/85 uppercase">
             EOD BRIEF — {teamName.toUpperCase()}
           </p>
-          <p className="mb-2 text-xs text-white/50">Top priorities for tomorrow:</p>
+          <p className="mb-3 font-display text-[10px] tracking-[0.18em] text-white/45 uppercase">
+            Top priorities for tomorrow
+          </p>
           {top.length ? (
-            top.map((t) => (
-              <div key={t.id} className="mb-1 flex flex-wrap gap-2 text-[13px]">
-                <span className="font-display text-[10px] font-bold tracking-wider text-[#FFD080]">
-                  {priorityLabels[t.priority].toUpperCase()}
-                </span>
-                <span className="text-white/85">{t.title}</span>
-                {t.due_date && (
-                  <span className="text-white/40">{formatDueDate(t.due_date)}</span>
-                )}
-              </div>
-            ))
+            <ul className="space-y-1.5">
+              {top.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex flex-wrap items-center gap-2 text-[13px]"
+                >
+                  <span
+                    className={`font-display priority-${t.priority} rounded-full px-2 py-[2px] text-[9px] font-bold tracking-[0.1em] uppercase`}
+                  >
+                    {priorityLabels[t.priority]}
+                  </span>
+                  <span className="text-white/85">{t.title}</span>
+                  {t.due_date && (
+                    <span className="font-display ml-auto text-[12px] tracking-wide text-white/40">
+                      {formatDueDate(t.due_date)}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="text-white/35">No critical or high-priority tasks.</p>
           )}

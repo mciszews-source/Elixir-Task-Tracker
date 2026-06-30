@@ -11,40 +11,26 @@ export function ElixirHeader({ view = "departments" }: ElixirHeaderProps) {
   const today = format(new Date(), "EEEE, MMMM d, yyyy");
 
   return (
-    <header className="relative z-20 flex items-center justify-between border-b border-white/12 px-8 py-4 glass-panel">
-      <div className="font-display text-[13px] font-light tracking-[0.2em] text-white/50 uppercase">
+    <header className="glass-panel relative z-20 flex items-center justify-between px-8 py-4">
+      <div className="font-display text-[12px] font-light tracking-[0.22em] text-white/55 uppercase">
         {today}
       </div>
 
-      <div className="flex items-center gap-1 rounded-full border border-white/14 bg-white/8 p-1">
+      <div className="elixir-segment">
         <Link
           href="/teams/ceo-office"
-          className={`rounded-full px-5 py-1.5 font-display text-[11px] font-bold tracking-[0.14em] transition-all ${
-            view === "departments"
-              ? "bg-white/90 text-[#21264C]"
-              : "text-white/45 hover:text-white/75"
-          }`}
+          data-active={view === "departments"}
         >
-          DEPARTMENTS
+          Departments
         </Link>
-        <Link
-          href="/projects"
-          className={`rounded-full px-5 py-1.5 font-display text-[11px] font-bold tracking-[0.14em] transition-all ${
-            view === "projects"
-              ? "bg-white/90 text-[#21264C]"
-              : "text-white/45 hover:text-white/75"
-          }`}
-        >
-          PROJECTS
+        <Link href="/projects" data-active={view === "projects"}>
+          Projects
         </Link>
       </div>
 
       <div className="flex items-center gap-2">
-        <Link
-          href="/reports/daily"
-          className="rounded-lg border border-white/30 bg-[rgba(176,49,40,0.25)] px-3.5 py-1.5 font-display text-[10px] font-bold tracking-[0.12em] text-[rgba(255,180,175,0.9)] transition hover:bg-[rgba(176,49,40,0.4)] hover:text-white"
-        >
-          DAILY REPORT
+        <Link href="/reports/daily" className="elixir-btn">
+          Daily Report
         </Link>
       </div>
     </header>

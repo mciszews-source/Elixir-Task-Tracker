@@ -49,29 +49,37 @@ function ReportSection({
   mode: "done" | "top";
 }) {
   return (
-    <section className="rounded-[14px] border border-white/12 bg-[rgba(33,38,76,0.5)] p-6 backdrop-blur-md">
-      <h2 className="font-display text-lg font-light tracking-[0.12em] text-white">{title}</h2>
-      <p className="mt-1 text-sm text-white/40">{dateLabel}</p>
+    <section className="glass-panel-strong rounded-[14px] p-6">
+      <h2 className="font-display text-lg font-light tracking-[0.12em] text-white">
+        {title}
+      </h2>
+      <p className="font-display mt-1 text-[11px] tracking-[0.18em] text-white/45 uppercase">
+        {dateLabel}
+      </p>
 
       {tasks.length === 0 ? (
-        <p className="mt-6 font-display text-[13px] tracking-widest text-white/25">No items.</p>
+        <p className="font-display mt-6 text-[12px] tracking-widest text-white/30 uppercase">
+          No items
+        </p>
       ) : (
         <ul className="mt-6 space-y-2">
           {tasks.map((task, i) => (
             <li
               key={task.id}
-              className="flex items-start gap-3 rounded-lg border border-white/8 bg-white/5 px-4 py-3"
+              className="glass-card flex items-start gap-3 rounded-[10px] px-4 py-3"
             >
               {mode === "top" ? (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[rgba(74,120,196,0.3)] font-display text-xs font-semibold text-white">
+                <span className="font-display flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[rgba(74,120,196,0.4)] bg-[rgba(74,120,196,0.30)] text-[11px] font-bold text-white">
                   {i + 1}
                 </span>
               ) : (
                 <span className="text-[#7DDFAD]">✓</span>
               )}
-              <div>
-                <p className="font-display text-sm font-medium text-white/90">{task.title}</p>
-                <p className="mt-1 text-xs text-white/40">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-white/92">
+                  {task.title}
+                </p>
+                <p className="mt-1 text-xs text-white/45">
                   {task.team?.name}
                   {task.due_date && ` · Due ${formatDueDate(task.due_date)}`}
                   {mode === "top" && ` · ${priorityLabels[task.priority]}`}

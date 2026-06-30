@@ -214,7 +214,7 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
       {canEdit && (
         <div className="mb-5 flex flex-wrap items-center gap-2.5">
           <input
-            className="glass-input inp-name min-w-[180px] flex-[2] rounded-[10px] px-4 py-2.5 text-sm"
+            className="glass-input min-w-[200px] flex-[2] rounded-[10px] px-4 py-[11px] text-sm"
             placeholder="New task…"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
@@ -222,29 +222,31 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
           />
           <input
             type="date"
-            className="glass-input rounded-[10px] px-3 py-2.5 text-sm"
+            className="glass-input elixir-date rounded-[10px] px-3 py-[11px] text-sm"
             value={newDue}
             onChange={(e) => setNewDue(e.target.value)}
           />
           <select
-            className="glass-input w-[130px] cursor-pointer rounded-[10px] px-3 py-2.5 text-sm"
+            className="elixir-select w-[140px] rounded-[10px] px-3 py-[11px] text-sm"
             value={newPriority}
             onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+            aria-label="Priority"
           >
-            <option value="critical" className="bg-[#21264C]">Critical</option>
-            <option value="high" className="bg-[#21264C]">High</option>
-            <option value="medium" className="bg-[#21264C]">Medium</option>
-            <option value="low" className="bg-[#21264C]">Low</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
           </select>
           <input
-            className="glass-input min-w-[160px] flex-[1.5] rounded-[10px] px-4 py-2.5 text-sm"
+            className="glass-input min-w-[180px] flex-[1.5] rounded-[10px] px-4 py-[11px] text-sm"
             placeholder="Risk if delayed…"
             value={newRisk}
             onChange={(e) => setNewRisk(e.target.value)}
           />
-          <label className="flex cursor-pointer items-center gap-2 text-xs whitespace-nowrap text-white/45">
+          <label className="flex cursor-pointer items-center gap-2 px-2 text-[11px] tracking-wide whitespace-nowrap text-white/55 select-none">
             <input
               type="checkbox"
+              className="elixir-check"
               checked={executiveFlag}
               onChange={(e) => setExecutiveFlag(e.target.checked)}
             />
@@ -253,9 +255,10 @@ export function TeamTracker({ team, role, userTeamIds }: TeamTrackerProps) {
           <button
             type="button"
             onClick={() => newTitle && createTask.mutate()}
-            className="font-display rounded-[10px] border border-white/35 bg-white/18 px-5 py-2.5 text-xs font-semibold tracking-wider text-white transition hover:bg-white/28"
+            disabled={!newTitle || createTask.isPending}
+            className="elixir-btn elixir-btn-primary"
           >
-            + ADD
+            {createTask.isPending ? "Adding…" : "+ Add"}
           </button>
         </div>
       )}
@@ -369,13 +372,12 @@ function StatPill({
   highlight?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs text-white/60 ${
-        highlight ? "border-[rgba(232,73,90,0.35)]" : "border-white/12 bg-white/8"
-      }`}
-    >
-      <span className="h-[7px] w-[7px] rounded-full" style={{ background: color }} />
-      <span className={highlight ? "text-[#FF8F9A]" : ""}>{label}</span>
+    <div className={highlight ? "elixir-pill elixir-pill-danger" : "elixir-pill"}>
+      <span
+        className="h-[7px] w-[7px] rounded-full"
+        style={{ background: color }}
+      />
+      <span>{label}</span>
     </div>
   );
 }

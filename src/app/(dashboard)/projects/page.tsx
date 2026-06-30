@@ -1,18 +1,18 @@
 import { ProjectsGrid } from "@/components/projects/projects-grid";
-import { TopBar } from "@/components/layout/top-bar";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
 
 export default function ProjectsPage() {
   return (
-    <>
-      <TopBar
-        title="Projects"
-        subtitle="Group tasks under larger initiatives"
-      />
-
-      <div className="flex-1 p-8">
+    <div>
+      <h1 className="font-display text-xl font-light tracking-[0.18em] text-white">
+        Projects
+      </h1>
+      <p className="mt-2 text-sm text-white/40">
+        Initiative tracking — Astral X, Clear, EVA 3D and more.
+      </p>
+      <div className="mt-8">
         <ProjectsGrid projects={MOCK_PROJECTS} />
       </div>
-    </>
+    </div>
   );
 }

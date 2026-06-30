@@ -111,6 +111,17 @@ Watch the run — green check = live.
 
 ---
 
+## Instant sign-in (no email — use when magic link is broken)
+
+1. GitHub → **Settings → Secrets → Actions** → add `AUTH_BOOTSTRAP_SECRET` (any long password you choose, e.g. `ElixirSetup2026!`)
+2. Merge latest `main` or re-run **Deploy to Cloudflare** workflow
+3. Open `https://YOUR-APP-URL/login/instant`
+4. Enter your Gmail + the bootstrap code → **Sign in now** (no email sent)
+
+Remove or rotate `AUTH_BOOTSTRAP_SECRET` after everyone can use normal email login.
+
+---
+
 ## Using the live app (no terminal)
 
 1. Open your `NEXT_PUBLIC_APP_URL` in a browser

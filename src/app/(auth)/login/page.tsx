@@ -240,6 +240,13 @@ function LoginForm() {
               Didn&apos;t get it? Try again
             </button>
           )}
+
+          <p className="pt-2 text-center text-xs text-white/40">
+            Email not working?{" "}
+            <a href="/login/instant" className="text-white/60 underline-offset-2 hover:underline">
+              Sign in instantly (no email)
+            </a>
+          </p>
         </form>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AUTH_DELIVERY_ADMIN_NOTE } from "@/lib/auth/constants";
+import { createClient } from "@/lib/supabase/client";
 
 type Status = "idle" | "loading" | "sent" | "error";
 
@@ -59,14 +60,29 @@ function LoginForm() {
         body: JSON.stringify({ email: normalizedEmail }),
       });
 
-      const payload = (await res.json()) as {
+      const raw = await res.text();
+      let payload: {
         ok?: boolean;
         message?: string;
         error?: unknown;
         code?: string;
         adminNote?: string;
         redirectTo?: string;
-      };
+      } = {};
+
+      try {
+        payload = raw ? (JSON.parse(raw) as typeof payload) : {};
+      } catch {
+        console.error("[login] magic link non-JSON response", {
+          status: res.status,
+          body: raw.slice(0, 200),
+        });
+        throw new Error(
+          res.ok
+            ? "Unexpected server response."
+            : `Server error (${res.status}). Try again or contact an admin.`,
+        );
+      }
 
       if (payload.redirectTo) {
         setRedirectTo(payload.redirectTo);
@@ -100,11 +116,40 @@ function LoginForm() {
       setMessage(payload.message ?? "Check your email for the sign-in link.");
       setAdminNote(payload.adminNote ?? null);
     } catch (err) {
-      console.error("[login] magic link network error", err);
-      setStatus("error");
-      setMessage("Network error. Check your connection and try again.");
-      setErrorCode("network_error");
-      setAdminNote(AUTH_DELIVERY_ADMIN_NOTE);
+      console.error("[login] magic link request failed, trying client fallback", err);
+
+      try {
+        const supabase = createClient();
+        const redirectTo = `${window.location.origin}/auth/callback`;
+        const { error } = await supabase.auth.signInWithOtp({
+          email: normalizedEmail,
+          options: { emailRedirectTo: redirectTo },
+        });
+
+        if (error) {
+          setStatus("error");
+          setMessage(error.message);
+          setErrorCode("supabase_error");
+          setAdminNote(AUTH_DELIVERY_ADMIN_NOTE);
+          return;
+        }
+
+        setStatus("sent");
+        setMessage(
+          "Check your email for the sign-in link. (Sent via backup path — click promptly; links expire.)",
+        );
+        setAdminNote(AUTH_DELIVERY_ADMIN_NOTE);
+      } catch (fallbackErr) {
+        console.error("[login] client fallback failed", fallbackErr);
+        setStatus("error");
+        setMessage(
+          err instanceof Error
+            ? err.message
+            : "Could not reach the auth server. Try again in a moment.",
+        );
+        setErrorCode("network_error");
+        setAdminNote(AUTH_DELIVERY_ADMIN_NOTE);
+      }
     }
   }
 

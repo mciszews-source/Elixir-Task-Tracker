@@ -22,6 +22,9 @@ export async function middleware(request: NextRequest) {
 
   if (isPublic) return response;
 
+  // API routes return JSON errors — never redirect them to the HTML login page.
+  if (pathname.startsWith("/api/")) return response;
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return response;
   }

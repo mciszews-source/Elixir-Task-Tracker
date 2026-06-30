@@ -89,12 +89,15 @@ https://elixir-task-tracker.yourname.workers.dev/auth/callback
 
 ### 6. Supabase database (one time)
 
-SQL Editor → run these files in order:
+SQL Editor → run these **comment-free paste files** in order (see `supabase/SQL_PASTE_GUIDE.md`):
 
-1. `supabase/migrations/001_initial_schema.sql`
-2. `supabase/migrations/002_executive_flag_and_admin_policies.sql`
-3. `supabase/migrations/003_prototype_seed.sql`
-4. `supabase/seed.sql` (optional — CEO office sample; skip if using 003 only)
+1. `supabase/PASTE_001_schema.sql`
+2. `supabase/PASTE_002_policies.sql`
+3. `supabase/PASTE_003_seed.sql`
+
+Open each file via **Raw** on GitHub and copy from there — do not paste from chat (comment lines like `-- Brings the live DB...` can lose `--` and cause `relation "the" does not exist`).
+
+Optional: `supabase/seed.sql` (CEO office sample; skip if using 003 only).
 
 ### 7. Trigger first deploy
 

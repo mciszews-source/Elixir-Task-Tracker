@@ -93,7 +93,8 @@ SQL Editor → run these files in order:
 
 1. `supabase/migrations/001_initial_schema.sql`
 2. `supabase/migrations/002_executive_flag_and_admin_policies.sql`
-3. `supabase/seed.sql`
+3. `supabase/migrations/003_prototype_seed.sql`
+4. `supabase/seed.sql` (optional — CEO office sample; skip if using 003 only)
 
 ### 7. Trigger first deploy
 

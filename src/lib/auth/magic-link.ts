@@ -25,28 +25,117 @@ export function resolveAuthCallbackUrl(request: Request): string {
   return `${requestUrl.origin}/auth/callback`;
 }
 
-export async function findInvitedUserByEmail(email: string): Promise<boolean> {
-  const admin = createAdminClient();
+export async function findInvitedUserByEmail(
+  email: string,
+): Promise<{ invited: boolean; adminError?: string }> {
   const normalized = normalizeAuthEmail(email);
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("email", normalized)
-    .maybeSingle();
+  try {
+    const admin = createAdminClient();
 
-  if (profile) return true;
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", normalized)
+      .maybeSingle();
 
-  // Fallback: scan auth users (small invite-only orgs).
-  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (error) {
-    console.error("[auth/magic-link] listUsers failed:", error.message);
-    return false;
+    if (profile) return { invited: true };
+
+    const { data, error } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (error) {
+      const message = formatAuthErrorMessage(error, "Could not verify invited users.");
+      console.error("[auth/magic-link] listUsers failed:", message);
+      return { invited: false, adminError: message };
+    }
+
+    const invited = (data.users ?? []).some(
+      (user) => user.email?.toLowerCase() === normalized,
+    );
+    return { invited };
+  } catch (err) {
+    const message = formatAuthErrorMessage(
+      err,
+      "Server cannot verify invited users. Ensure SUPABASE_SERVICE_ROLE_KEY is set in Cloudflare secrets.",
+    );
+    console.error("[auth/magic-link] admin client failed:", message);
+    return { invited: false, adminError: message };
+  }
+}
+
+export function formatAuthErrorMessage(error: unknown, fallback: string): string {
+  if (!error) return fallback;
+  if (typeof error === "string") return error || fallback;
+
+  if (error instanceof Error) {
+    return error.message || fallback;
   }
 
-  return (data.users ?? []).some(
-    (user) => user.email?.toLowerCase() === normalized,
-  );
+  if (typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const message = record.message;
+    if (typeof message === "string" && message.trim()) return message;
+    if (typeof record.error === "string" && record.error.trim()) return record.error;
+    if (typeof record.error_description === "string" && record.error_description.trim()) {
+      return record.error_description;
+    }
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== "{}") return serialized;
+  }
+
+  return fallback;
+}
+
+export function classifySupabaseAuthError(error: {
+  message?: string;
+  status?: number;
+  code?: string;
+}): { code: string; message: string; status: number } {
+  const raw = formatAuthErrorMessage(error, "Authentication request failed.");
+  const lower = raw.toLowerCase();
+  const status = error.status ?? 400;
+
+  if (lower.includes("rate") || status === 429) {
+    return {
+      code: "rate_limited",
+      message: "Too many sign-in attempts. Wait a few minutes, then try again.",
+      status: 429,
+    };
+  }
+
+  if (lower.includes("redirect") || lower.includes("url")) {
+    return {
+      code: "redirect_misconfigured",
+      message: raw,
+      status: 400,
+    };
+  }
+
+  const isSmtp =
+    lower.includes("smtp") ||
+    lower.includes("sending") ||
+    lower.includes("mail") ||
+    lower.includes("email") ||
+    error.code === "unexpected_failure";
+
+  if (isSmtp) {
+    return {
+      code: "smtp_error",
+      message:
+        raw === "Authentication request failed." || raw === "{}"
+          ? "Supabase could not send email via SMTP. In Supabase → Auth → SMTP: confirm Enable custom SMTP is on, Host smtp.sendgrid.net, Port 587, Username apikey, Password = SendGrid API key, and Sender email exactly matches your verified SendGrid single sender."
+          : `${raw} — Check Supabase → Auth → SMTP and SendGrid single sender verification.`,
+      status: 502,
+    };
+  }
+
+  return {
+    code: "supabase_error",
+    message: raw === "{}" ? "Supabase rejected the sign-in request. Check Auth logs in the Supabase dashboard." : raw,
+    status,
+  };
 }
 
 export function logMagicLinkAttempt(payload: {
@@ -88,8 +177,24 @@ export async function sendMagicLink(
     };
   }
 
-  const invited = await findInvitedUserByEmail(normalized);
-  if (!invited) {
+  const inviteCheck = await findInvitedUserByEmail(normalized);
+  if (inviteCheck.adminError) {
+    logMagicLinkAttempt({
+      email: normalized,
+      redirectTo,
+      outcome: "error",
+      code: "admin_misconfigured",
+      detail: inviteCheck.adminError,
+    });
+    return {
+      ok: false,
+      code: "admin_misconfigured",
+      message: inviteCheck.adminError,
+      status: 503,
+    };
+  }
+
+  if (!inviteCheck.invited) {
     logMagicLinkAttempt({
       email: normalized,
       redirectTo,
@@ -116,32 +221,17 @@ export async function sendMagicLink(
   });
 
   if (error) {
-    const isRateLimit =
-      error.message.toLowerCase().includes("rate") ||
-      error.status === 429;
-    const isRedirect =
-      error.message.toLowerCase().includes("redirect") ||
-      error.message.toLowerCase().includes("url");
+    const classified = classifySupabaseAuthError(error);
 
     logMagicLinkAttempt({
       email: normalized,
       redirectTo,
       outcome: "error",
-      code: isRateLimit ? "rate_limited" : isRedirect ? "redirect_misconfigured" : "supabase_error",
-      detail: error.message,
+      code: classified.code,
+      detail: classified.message,
     });
 
-    if (isRateLimit) {
-      return {
-        ok: false,
-        code: "rate_limited",
-        message:
-          "Too many sign-in attempts. Wait a few minutes, then try again.",
-        status: 429,
-      };
-    }
-
-    if (isRedirect) {
+    if (classified.code === "redirect_misconfigured") {
       return {
         ok: false,
         code: "redirect_misconfigured",
@@ -152,9 +242,9 @@ export async function sendMagicLink(
 
     return {
       ok: false,
-      code: "supabase_error",
-      message: error.message,
-      status: error.status ?? 400,
+      code: classified.code,
+      message: classified.message,
+      status: classified.status,
     };
   }
 

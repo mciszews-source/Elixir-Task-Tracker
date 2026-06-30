@@ -95,7 +95,9 @@ export interface DailyReportData {
 export interface ReorderTasksPayload {
   team_id: string;
   task_id: string;
-  new_sort_order: number;
+  new_sort_order?: number;
+  neighbor_before?: number;
+  neighbor_after?: number;
   target_team_id?: string;
 }
 
@@ -124,11 +126,23 @@ export interface UpdateTaskPayload {
   team_id?: string;
 }
 
+export interface TeamMember {
+  team_id: string;
+  user_id: string;
+  is_lead: boolean;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
       profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> };
       teams: { Row: Team; Insert: Partial<Team>; Update: Partial<Team> };
+      team_members: {
+        Row: TeamMember;
+        Insert: Partial<TeamMember>;
+        Update: Partial<TeamMember>;
+      };
       tasks: { Row: Task; Insert: Partial<Task>; Update: Partial<Task> };
       projects: { Row: Project; Insert: Partial<Project>; Update: Partial<Project> };
       activity_log: {

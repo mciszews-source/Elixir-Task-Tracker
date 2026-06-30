@@ -1,11 +1,14 @@
 -- 003_prototype_seed.sql
 -- Brings the live DB to parity with docs/elixir-task-tracker_4.html.
--- Idempotent: safe to re-run. All inserts use ON CONFLICT.
+-- Idempotent: safe to re-run. Uses NOT EXISTS for inserts (no ON CONFLICT
+-- inference needed → portable across Postgres versions and partial-index
+-- edge cases).
 --
 -- What this does:
---   1. Adds project_phases + phase_docs tables (for the legacy Projects view)
---   2. Adds a unique index on tasks.external_id for idempotent upserts
---   3. Adds icon column to projects (legacy uses ✦ ◎ ⬡)
+--   1. Adds project_phases + phase_docs tables
+--   2. Drops any leftover partial unique indexes from a prior failed run,
+--      then creates plain unique indexes for external_id / slug
+--   3. Adds icon + slug columns to projects
 --   4. Upserts the 6 prototype teams: operations, marketing, sales, ewan, max, marek_jr_
 --   5. Inserts the 69 prototype tasks (DEFAULT_TASKS), tagged external_id='legacy:N'
 --   6. Inserts the 3 prototype projects + 29 phases (DEFAULT_PROJECTS)
@@ -23,10 +26,6 @@ CREATE TABLE IF NOT EXISTS project_phases (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS project_phases_external_id_uidx
-  ON project_phases (external_id)
-  WHERE external_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS phase_docs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -58,23 +57,29 @@ CREATE POLICY "Admins write docs"
   USING (is_admin()) WITH CHECK (is_admin());
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 2. Unique index on tasks.external_id (used as idempotency key below)
+-- 2. Plain unique indexes (drop any leftover partial ones from a prior run)
+--    Multiple NULLs in a unique index are allowed by default in Postgres,
+--    so this is safe even though most existing rows have external_id IS NULL.
 -- ─────────────────────────────────────────────────────────────────────────
+DROP INDEX IF EXISTS tasks_external_id_uidx;
+DROP INDEX IF EXISTS project_phases_external_id_uidx;
+DROP INDEX IF EXISTS projects_slug_uidx;
+
 CREATE UNIQUE INDEX IF NOT EXISTS tasks_external_id_uidx
-  ON tasks (external_id)
-  WHERE external_id IS NOT NULL;
+  ON tasks (external_id);
+CREATE UNIQUE INDEX IF NOT EXISTS project_phases_external_id_uidx
+  ON project_phases (external_id);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 3. Projects gain an icon + slug column (legacy ✦ ◎ ⬡)
+-- 3. Projects: icon + slug columns
 -- ─────────────────────────────────────────────────────────────────────────
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS slug TEXT;
-CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_uidx
-  ON projects (slug)
-  WHERE slug IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_uidx ON projects (slug);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 4. Upsert the 6 prototype teams (slug is unique → safe to re-run)
+-- 4. Upsert the 6 prototype teams (teams.slug has a real UNIQUE constraint
+--    from migration 001 → ON CONFLICT (slug) is safe)
 -- ─────────────────────────────────────────────────────────────────────────
 INSERT INTO teams (name, slug, color, sort_order) VALUES
   ('Operations', 'operations', '#7c3aed', 1),
@@ -90,7 +95,7 @@ ON CONFLICT (slug) DO UPDATE SET
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 5. Insert the 69 prototype tasks (DEFAULT_TASKS)
---    idempotency key: external_id = 'legacy:<numeric id from prototype>'
+--    Idempotent: skips any row whose external_id already exists.
 -- ─────────────────────────────────────────────────────────────────────────
 WITH team_map AS (
   SELECT slug, id FROM teams
@@ -187,19 +192,28 @@ SELECT
   'legacy:' || s.legacy_id
 FROM seed s
 JOIN team_map tm ON tm.slug = s.slug
-ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1 FROM tasks t WHERE t.external_id = 'legacy:' || s.legacy_id
+);
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 6. Insert the 3 prototype projects (DEFAULT_PROJECTS)
+-- 6. Insert the 3 prototype projects
 -- ─────────────────────────────────────────────────────────────────────────
 INSERT INTO projects (slug, name, description, status, icon)
-VALUES
+SELECT v.slug, v.name, v.description, v.status::project_status, v.icon
+FROM (VALUES
   ('astralx', 'Astral X', 'Astral X product development', 'active', '✦'),
   ('clear',   'Clear',    'Clear initiative',              'active', '◎'),
   ('eva3d',   'EVA 3D',   'EVA 3D rollout',                'active', '⬡')
-ON CONFLICT (slug) DO UPDATE SET
-  name = EXCLUDED.name,
-  icon = EXCLUDED.icon;
+) AS v(slug, name, description, status, icon)
+WHERE NOT EXISTS (
+  SELECT 1 FROM projects p WHERE p.slug = v.slug
+);
+
+-- Make sure existing rows (if any partially seeded) get the icon set:
+UPDATE projects SET icon = '✦' WHERE slug = 'astralx' AND COALESCE(icon, '') = '';
+UPDATE projects SET icon = '◎' WHERE slug = 'clear'   AND COALESCE(icon, '') = '';
+UPDATE projects SET icon = '⬡' WHERE slug = 'eva3d'   AND COALESCE(icon, '') = '';
 
 -- 6b. Phases for those projects (idempotent on external_id)
 WITH proj_map AS (
@@ -207,41 +221,43 @@ WITH proj_map AS (
 ),
 phase_seed(proj_slug, legacy_id, name, done, sort_order) AS (
   VALUES
-  ('astralx', 'a1',  'Market Research', false,  100),
-  ('astralx', 'a2',  'Market Feedback', false,  200),
-  ('astralx', 'a3',  'Load Design', false,  300),
-  ('astralx', 'a4',  'CAD Design 1', false,  400),
-  ('astralx', 'a5',  'CAD Design 2', false,  500),
-  ('astralx', 'a6',  'CAD Design 3', false,  600),
-  ('astralx', 'a7',  'Cost of Prototype', false,  700),
-  ('astralx', 'a8',  'Presentation 1', false,  800),
-  ('astralx', 'a9',  'Presentation 2', false,  900),
-  ('astralx', 'a10', 'IP / Legal', false, 1000),
-  ('clear',   'c1',  'Market Research', false,  100),
-  ('clear',   'c2',  'Market Feedback', false,  200),
-  ('clear',   'c3',  'Load Design', false,  300),
-  ('clear',   'c4',  'CAD Design 1', false,  400),
-  ('clear',   'c5',  'CAD Design 2', false,  500),
-  ('clear',   'c6',  'CAD Design 3', false,  600),
-  ('clear',   'c7',  'Cost of Prototype', false,  700),
-  ('clear',   'c8',  'Presentation 1', false,  800),
-  ('clear',   'c9',  'Presentation 2', false,  900),
-  ('clear',   'c10', 'IP / Legal', false, 1000),
-  ('eva3d',   'e2',  'Market Feedback', false,  100),
-  ('eva3d',   'e3',  'Load Design', false,  200),
-  ('eva3d',   'e4',  'CAD Design 1', false,  300),
-  ('eva3d',   'e5',  'CAD Design 2', false,  400),
-  ('eva3d',   'e6',  'CAD Design 3', false,  500),
-  ('eva3d',   'e7',  'Cost of Prototype', false,  600),
-  ('eva3d',   'e8',  'Presentation 1', false,  700),
-  ('eva3d',   'e9',  'Presentation 2', false,  800),
-  ('eva3d',   'e10', 'IP / Legal', false,  900)
+  ('astralx', 'a1',  'Market Research',     false,  100),
+  ('astralx', 'a2',  'Market Feedback',     false,  200),
+  ('astralx', 'a3',  'Load Design',         false,  300),
+  ('astralx', 'a4',  'CAD Design 1',        false,  400),
+  ('astralx', 'a5',  'CAD Design 2',        false,  500),
+  ('astralx', 'a6',  'CAD Design 3',        false,  600),
+  ('astralx', 'a7',  'Cost of Prototype',   false,  700),
+  ('astralx', 'a8',  'Presentation 1',      false,  800),
+  ('astralx', 'a9',  'Presentation 2',      false,  900),
+  ('astralx', 'a10', 'IP / Legal',          false, 1000),
+  ('clear',   'c1',  'Market Research',     false,  100),
+  ('clear',   'c2',  'Market Feedback',     false,  200),
+  ('clear',   'c3',  'Load Design',         false,  300),
+  ('clear',   'c4',  'CAD Design 1',        false,  400),
+  ('clear',   'c5',  'CAD Design 2',        false,  500),
+  ('clear',   'c6',  'CAD Design 3',        false,  600),
+  ('clear',   'c7',  'Cost of Prototype',   false,  700),
+  ('clear',   'c8',  'Presentation 1',      false,  800),
+  ('clear',   'c9',  'Presentation 2',      false,  900),
+  ('clear',   'c10', 'IP / Legal',          false, 1000),
+  ('eva3d',   'e2',  'Market Feedback',     false,  100),
+  ('eva3d',   'e3',  'Load Design',         false,  200),
+  ('eva3d',   'e4',  'CAD Design 1',        false,  300),
+  ('eva3d',   'e5',  'CAD Design 2',        false,  400),
+  ('eva3d',   'e6',  'CAD Design 3',        false,  500),
+  ('eva3d',   'e7',  'Cost of Prototype',   false,  600),
+  ('eva3d',   'e8',  'Presentation 1',      false,  700),
+  ('eva3d',   'e9',  'Presentation 2',      false,  800),
+  ('eva3d',   'e10', 'IP / Legal',          false,  900)
 )
 INSERT INTO project_phases (project_id, name, done, sort_order, external_id)
 SELECT pm.id, ps.name, ps.done, ps.sort_order, 'legacy:' || ps.legacy_id
 FROM phase_seed ps
 JOIN proj_map pm ON pm.slug = ps.proj_slug
-ON CONFLICT (external_id) WHERE external_id IS NOT NULL DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1 FROM project_phases pp WHERE pp.external_id = 'legacy:' || ps.legacy_id
+);
 
 -- Enable realtime for the new tables (best-effort; safe if already added)
 DO $$
@@ -256,4 +272,4 @@ BEGIN
   END;
 END $$;
 
--- Done. Inserted: 6 teams, 69 tasks, 3 projects, 29 phases.
+-- Done. Should insert: 6 teams (upserted), 69 tasks, 3 projects, 29 phases.

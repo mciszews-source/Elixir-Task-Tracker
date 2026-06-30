@@ -53,8 +53,14 @@ jobs:
       - name: Build and deploy to Cloudflare Workers
         run: npm run deploy
 
-      - name: Sync worker secret (after worker exists)
-        run: echo "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+      - name: Sync worker secrets (after worker exists)
+        run: |
+          echo "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+          if [ -n "${AUTH_BOOTSTRAP_SECRET:-}" ]; then
+            echo "$AUTH_BOOTSTRAP_SECRET" | npx wrangler secret put AUTH_BOOTSTRAP_SECRET
+          fi
+        env:
+          AUTH_BOOTSTRAP_SECRET: ${{ secrets.AUTH_BOOTSTRAP_SECRET }}
 
       - name: Deployment summary
         run: |

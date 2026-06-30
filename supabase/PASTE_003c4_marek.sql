@@ -3,9 +3,9 @@ WITH team_map AS (
 ),
 seed(legacy_id, slug, title, description, priority, due_date, from_ewan, status, completed_at, sort_order) AS (
   VALUES
-  (68, 'marek_jr_', 'Roxium Execution System plus Dashboard', '', 'high', '2026-06-19'::date, false, 'open', NULL, 100),
-  (69, 'marek_jr_', 'EVA 3D - Marketing Execution System', '', 'high', '2026-06-26'::date, false, 'open', NULL, 200),
-  (70, 'marek_jr_', 'Dr. Kristy Hamilton - First Marketing Deliveries', '', 'high', '2026-06-19'::date, false, 'open', NULL, 300)
+  (68, 'marek_jr_', $t68$Roxium Execution System plus Dashboard$t68$, '', 'high', '2026-06-19'::date, false, 'open', NULL, 100),
+  (69, 'marek_jr_', $t69$EVA 3D - Marketing Execution System$t69$, '', 'high', '2026-06-26'::date, false, 'open', NULL, 200),
+  (70, 'marek_jr_', $t70$Dr. Kristy Hamilton - First Marketing Deliveries$t70$, '', 'high', '2026-06-19'::date, false, 'open', NULL, 300)
 )
 INSERT INTO tasks (
   team_id, title, description, priority, due_date,
@@ -23,12 +23,12 @@ SELECT
   s.completed_at,
   s.sort_order,
   true,
-  'legacy:' || s.legacy_id
+  ('legacy:' || s.legacy_id::text)
 FROM seed s
 JOIN team_map tm ON tm.slug = s.slug
 WHERE NOT EXISTS (
   SELECT 1 FROM tasks t
-  WHERE t.external_id = 'legacy:' || s.legacy_id::text
+  WHERE t.external_id = ('legacy:' || s.legacy_id::text)
 );
 
 SELECT t.slug, count(*) AS legacy_tasks

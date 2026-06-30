@@ -1,7 +1,35 @@
 # Supabase SQL paste guide
 
-Use these files in the **Supabase SQL Editor** (Dashboard → SQL → New query).  
-Do **not** copy SQL from chat — dashes and quotes often get corrupted on paste.
+**Copy only from Raw GitHub links below — never from this chat, email, or the Supabase RLS warning popup.**
+
+If you accidentally paste the Supabase warning text (`...may be able to access the.`), PostgreSQL runs the word **`the`** as SQL → `relation "the" does not exist`.
+
+## You only need these files now
+
+| File | When |
+|------|------|
+| `PASTE_001_SKIP.sql` | **Run this instead of 001** — confirms schema exists |
+| `PASTE_003c1_ops_mkt_sales.sql` | Tasks step 1 of 4 |
+| `PASTE_003c2_ewan.sql` | Tasks step 2 of 4 |
+| `PASTE_003c3_max.sql` | Tasks step 3 of 4 |
+| `PASTE_003c4_marek.sql` | Tasks step 4 of 4 |
+
+**Do not run `PASTE_001_schema.sql`** if you already got `user_role already exists` — that error means 001 succeeded earlier.
+
+## Order (your situation: 002, 003a, 003b, 003d already done)
+
+Run only the four **003c** files above, in order. Clear the SQL editor completely between each file.
+
+Raw links:
+
+```
+https://raw.githubusercontent.com/mciszews-source/Elixir-Task-Tracker/cursor/fix-seed-sql-quotes-3b87/supabase/PASTE_003c1_ops_mkt_sales.sql
+https://raw.githubusercontent.com/mciszews-source/Elixir-Task-Tracker/cursor/fix-seed-sql-quotes-3b87/supabase/PASTE_003c2_ewan.sql
+https://raw.githubusercontent.com/mciszews-source/Elixir-Task-Tracker/cursor/fix-seed-sql-quotes-3b87/supabase/PASTE_003c3_max.sql
+https://raw.githubusercontent.com/mciszews-source/Elixir-Task-Tracker/cursor/fix-seed-sql-quotes-3b87/supabase/PASTE_003c4_marek.sql
+```
+
+First line of **003c1** must be `WITH team_map AS (` — nothing before it.
 
 ## Order
 
@@ -78,14 +106,17 @@ Expected: 6 teams, 69 tasks, 3 projects, 29 phases.
 
 ## Error: `type "user_role" already exists`
 
-**Good — 001 is already applied.** Do not run `PASTE_001_schema.sql` again.
-
-Next:
-
-1. Run `PASTE_002_policies.sql` (skip if `is_executive_request` column already exists)
-2. Run `PASTE_003_seed.sql`
+**Stop running 001.** Run `PASTE_001_SKIP.sql` instead — it only prints a confirmation message.
 
 ## Error: `relation "the" does not exist`
+
+Usually one of:
+
+1. Pasted SQL from **chat** or **docs** (comment/prose lost its `--` prefix)
+2. Pasted the **Supabase RLS warning** text into the editor by mistake
+3. Old single-quoted task seed (fixed in latest 003c files — uses `$t10$...$t10$` dollar quotes)
+
+Fix: open the **raw GitHub** link → Ctrl+A in the browser → Ctrl+C → **delete all text** in SQL editor → paste → Run.
 
 This means **prose was executed as SQL**, not that a table is missing.
 

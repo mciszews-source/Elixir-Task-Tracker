@@ -1,32 +1,16 @@
-DO $$
-DECLARE team_count int;
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'tasks' AND column_name = 'is_executive_request'
-  ) THEN
-    RAISE EXCEPTION 'Run PASTE_002_policies.sql first.';
-  END IF;
-  SELECT count(*) INTO team_count FROM teams
-    WHERE slug IN ('operations','marketing','sales','ewan','max','marek_jr_');
-  IF team_count < 6 THEN
-    RAISE EXCEPTION 'Run PASTE_003b_teams.sql first. Found % teams.', team_count;
-  END IF;
-END $$;
-
 WITH team_map AS (
   SELECT slug, id FROM teams WHERE slug IN ('operations','marketing','sales')
 ),
 seed(legacy_id, slug, title, description, priority, due_date, from_ewan, status, completed_at, sort_order) AS (
   VALUES
-  (1, 'operations', 'Finalize vendor contracts', 'Supplier delay / cost overruns if unresolved', 'high', '2026-06-07'::date, false, 'open', NULL::timestamptz, 100),
-  (2, 'operations', 'Weekly ops review prep', 'Team misalignment on KPIs', 'medium', '2026-06-06'::date, false, 'open', NULL, 200),
-  (3, 'operations', 'Office supply reorder', 'Minor inconvenience only', 'low', '2026-06-12'::date, false, 'open', NULL, 300),
-  (5, 'marketing', 'Marketing Plan and Materials for Dr. Shararah', 'Relationship Management', 'high', '2026-06-10'::date, false, 'open', NULL, 100),
-  (42, 'marketing', 'Outstanding needs from Dr. Kassir and Scheila', 'Important relationship', 'high', '2026-06-09'::date, false, 'open', NULL, 200),
-  (58, 'marketing', 'Finish Branding For AstralX', '', 'high', '2026-06-12'::date, false, 'open', NULL, 300),
-  (6, 'marketing', 'Coordinate Omar Husseins EVA announcement', 'EVA marketing', 'medium', '2026-06-09'::date, false, 'open', NULL, 400),
-  (9, 'sales', 'Kristy Hamilton EVA', '', 'medium', '2026-06-15'::date, false, 'open', NULL, 100)
+  (1, 'operations', $t1$Finalize vendor contracts$t1$, $d1$Supplier delay / cost overruns if unresolved$d1$, 'high', '2026-06-07'::date, false, 'open', NULL::timestamptz, 100),
+  (2, 'operations', $t2$Weekly ops review prep$t2$, $d2$Team misalignment on KPIs$d2$, 'medium', '2026-06-06'::date, false, 'open', NULL, 200),
+  (3, 'operations', $t3$Office supply reorder$t3$, $d3$Minor inconvenience only$d3$, 'low', '2026-06-12'::date, false, 'open', NULL, 300),
+  (5, 'marketing', $t5$Marketing Plan and Materials for Dr. Shararah$t5$, $d5$Relationship Management$d5$, 'high', '2026-06-10'::date, false, 'open', NULL, 100),
+  (42, 'marketing', $t42$Outstanding needs from Dr. Kassir and Scheila$t42$, $d42$Important relationship$d42$, 'high', '2026-06-09'::date, false, 'open', NULL, 200),
+  (58, 'marketing', $t58$Finish Branding For AstralX$t58$, '', 'high', '2026-06-12'::date, false, 'open', NULL, 300),
+  (6, 'marketing', $t6$Coordinate Omar Husseins EVA announcement$t6$, $d6$EVA marketing$d6$, 'medium', '2026-06-09'::date, false, 'open', NULL, 400),
+  (9, 'sales', $t9$Kristy Hamilton EVA$t9$, '', 'medium', '2026-06-15'::date, false, 'open', NULL, 100)
 )
 INSERT INTO tasks (
   team_id, title, description, priority, due_date,
@@ -44,12 +28,12 @@ SELECT
   s.completed_at,
   s.sort_order,
   true,
-  'legacy:' || s.legacy_id
+  ('legacy:' || s.legacy_id::text)
 FROM seed s
 JOIN team_map tm ON tm.slug = s.slug
 WHERE NOT EXISTS (
   SELECT 1 FROM tasks t
-  WHERE t.external_id = 'legacy:' || s.legacy_id::text
+  WHERE t.external_id = ('legacy:' || s.legacy_id::text)
 );
 
 SELECT t.slug, count(*) AS legacy_tasks

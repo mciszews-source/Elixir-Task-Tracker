@@ -78,13 +78,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const actionLink = data.properties?.action_link;
-    if (!actionLink) {
+    // Do NOT use data.properties.action_link. That points at Supabase's
+    // /auth/v1/verify endpoint, which (for the implicit flow) returns the
+    // session in the URL fragment (#access_token=...). Our /auth/callback is a
+    // server route handler and can never read a fragment, so the session is
+    // silently lost and the user bounces back to /login.
+    //
+    // Instead, hand the browser a link straight to our own callback carrying
+    // the OTP token_hash as a query param. The callback verifies it server-side
+    // (verifyOtp) and writes the auth cookies before redirecting — fully
+    // email-independent and server-readable.
+    const tokenHash = data.properties?.hashed_token;
+    if (!tokenHash) {
       return NextResponse.json(
         { error: "Could not generate sign-in link.", code: "no_link" },
         { status: 500 },
       );
     }
+
+    const callbackUrl = new URL(redirectTo);
+    callbackUrl.searchParams.set("token_hash", tokenHash);
+    callbackUrl.searchParams.set("type", "magiclink");
+    callbackUrl.searchParams.set("next", "/");
+    const actionLink = callbackUrl.toString();
 
     console.info(
       JSON.stringify({

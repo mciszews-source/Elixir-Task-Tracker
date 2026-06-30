@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
-  const type = searchParams.get("type");
+  // Magic-link / OTP emails carry token_hash + type. If a template omits type,
+  // default to "email" so verifyOtp still runs instead of falling through to
+  // the "missing params" error and bouncing the user back to /login.
+  const type = searchParams.get("type") ?? "email";
   const next = safeNextPath(
     searchParams.get("next") ?? searchParams.get("redirect"),
   );
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl);
   }
 
-  if (tokenHash && type) {
+  if (tokenHash) {
     response = NextResponse.redirect(successUrl);
     const otpSupabase = createRouteHandlerClient(request, response);
     const { error } = await otpSupabase.auth.verifyOtp({

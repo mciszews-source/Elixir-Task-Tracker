@@ -57,7 +57,7 @@ export function DashboardClient({
         title="Cross-team dashboard"
         subtitle={
           isLoading
-            ? "Loading tasks..."
+            ? "Loading tasks…"
             : "Prioritized work across all departments"
         }
         userName={userName}
@@ -67,7 +67,9 @@ export function DashboardClient({
       <div className="flex flex-1 gap-6 p-8">
         <div className="min-w-0 flex-1">
           {isLoading ? (
-            <p className="text-sm text-slate-500">Loading dashboard...</p>
+            <p className="font-display text-[12px] tracking-widest text-white/30 uppercase">
+              Loading dashboard…
+            </p>
           ) : (
             <TaskBoard
               teams={teams}

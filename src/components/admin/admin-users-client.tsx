@@ -86,43 +86,45 @@ export function AdminUsersClient() {
       </p>
 
       {/* Invite form */}
-      <div className="mt-8 rounded-[14px] border border-white/12 bg-white/8 p-6 backdrop-blur-md">
+      <div className="glass-panel-strong mt-8 rounded-[14px] p-6">
         <h2 className="font-display text-[11px] font-bold tracking-[0.2em] text-white/50 uppercase">
           Invite new user
         </h2>
         <div className="mt-4 flex flex-wrap gap-3">
           <input
-            className="glass-input min-w-[200px] flex-1 rounded-[10px] px-4 py-2.5 text-sm"
+            className="glass-input min-w-[200px] flex-1 rounded-[10px] px-4 py-[11px] text-sm"
             placeholder="Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <input
-            className="glass-input min-w-[160px] rounded-[10px] px-4 py-2.5 text-sm"
+            className="glass-input min-w-[160px] rounded-[10px] px-4 py-[11px] text-sm"
             placeholder="Full name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <select
-            className="glass-input rounded-[10px] px-3 py-2.5 text-sm"
+            className="elixir-select min-w-[150px] rounded-[10px] px-3 py-[11px] text-sm"
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
+            aria-label="Role"
           >
-            <option value="member" className="bg-[#21264C]">Member</option>
-            <option value="team_lead" className="bg-[#21264C]">Team Lead</option>
-            <option value="executive" className="bg-[#21264C]">Executive</option>
-            <option value="admin" className="bg-[#21264C]">Admin</option>
-            <option value="viewer" className="bg-[#21264C]">Viewer</option>
+            <option value="member">Member</option>
+            <option value="team_lead">Team Lead</option>
+            <option value="executive">Executive</option>
+            <option value="admin">Admin</option>
+            <option value="viewer">Viewer</option>
           </select>
           <select
-            className="glass-input rounded-[10px] px-3 py-2.5 text-sm"
+            className="elixir-select min-w-[160px] rounded-[10px] px-3 py-[11px] text-sm"
             value={teamId}
             onChange={(e) => setTeamId(e.target.value)}
+            aria-label="Team"
           >
-            <option value="" className="bg-[#21264C]">No team</option>
+            <option value="">No team</option>
             {teams.map((t) => (
-              <option key={t.id} value={t.id} className="bg-[#21264C]">
+              <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
@@ -131,7 +133,7 @@ export function AdminUsersClient() {
             type="button"
             disabled={!email || invite.isPending}
             onClick={() => invite.mutate()}
-            className="font-display rounded-[10px] border border-white/35 bg-white/18 px-5 py-2.5 text-xs font-semibold tracking-wider text-white transition hover:bg-white/28 disabled:opacity-50"
+            className="elixir-btn elixir-btn-primary"
           >
             {invite.isPending ? "Sending…" : "Send invite"}
           </button>
@@ -145,26 +147,26 @@ export function AdminUsersClient() {
       </div>
 
       {/* User list */}
-      <div className="mt-8 flex flex-col gap-3">
+      <div className="mt-8 flex flex-col gap-2.5">
         {users.map((user) => (
           <div
             key={user.id}
-            className="glass-card flex flex-wrap items-center justify-between gap-4 rounded-xl px-5 py-4"
+            className="glass-card glass-card-hover flex flex-wrap items-center justify-between gap-4 rounded-xl px-5 py-4 transition-all"
           >
-            <div>
+            <div className="min-w-0">
               <p className="font-display text-sm font-medium text-white/90">
                 {user.full_name || user.email}
               </p>
-              <p className="text-xs text-white/40">{user.email}</p>
-              <p className="mt-1 font-display text-[10px] tracking-wider text-white/50 uppercase">
+              <p className="truncate text-xs text-white/40">{user.email}</p>
+              <p className="font-display mt-1 text-[10px] tracking-[0.14em] text-white/50 uppercase">
                 {user.role}
                 {user.teams.length > 0 &&
                   ` · ${user.teams.map((t) => t.team?.name).join(", ")}`}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
-                className="glass-input rounded-lg px-2 py-1.5 text-xs"
+                className="elixir-select rounded-lg px-2.5 py-1.5 text-xs"
                 value={user.role}
                 onChange={(e) =>
                   updateUser.mutate({
@@ -172,17 +174,24 @@ export function AdminUsersClient() {
                     role: e.target.value as UserRole,
                   })
                 }
+                aria-label="Change role"
               >
-                {(["admin", "executive", "team_lead", "member", "viewer"] as UserRole[]).map(
-                  (r) => (
-                    <option key={r} value={r} className="bg-[#21264C]">
-                      {r}
-                    </option>
-                  ),
-                )}
+                {(
+                  [
+                    "admin",
+                    "executive",
+                    "team_lead",
+                    "member",
+                    "viewer",
+                  ] as UserRole[]
+                ).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
               <select
-                className="glass-input rounded-lg px-2 py-1.5 text-xs"
+                className="elixir-select rounded-lg px-2.5 py-1.5 text-xs"
                 defaultValue=""
                 onChange={(e) => {
                   if (e.target.value) {
@@ -190,12 +199,11 @@ export function AdminUsersClient() {
                     e.target.value = "";
                   }
                 }}
+                aria-label="Add to team"
               >
-                <option value="" className="bg-[#21264C]">
-                  + Add to team
-                </option>
+                <option value="">+ Add to team</option>
                 {teams.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-[#21264C]">
+                  <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
                 ))}

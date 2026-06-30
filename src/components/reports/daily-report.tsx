@@ -16,32 +16,38 @@ export function DailyReport({ tasks, dateLabel }: DailyReportProps) {
   }, {});
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6">
+    <section className="glass-panel-strong rounded-[14px] p-6">
       <header className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">Completed today</h2>
-        <p className="text-sm text-slate-500">{dateLabel}</p>
+        <h2 className="font-display text-xl font-light tracking-[0.12em] text-white">
+          Completed today
+        </h2>
+        <p className="mt-1 text-sm text-white/45">{dateLabel}</p>
       </header>
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-slate-500">No tasks completed yet today.</p>
+        <p className="font-display text-[12px] tracking-widest text-white/30 uppercase">
+          No tasks completed yet today
+        </p>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([teamName, teamTasks]) => (
             <div key={teamName}>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h3 className="font-display mb-3 text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">
                 {teamName}
               </h3>
               <ul className="space-y-2">
                 {teamTasks.map((task) => (
                   <li
                     key={task.id}
-                    className="flex items-start gap-3 rounded-lg border border-slate-100 px-4 py-3"
+                    className="glass-card flex items-start gap-3 rounded-[10px] px-4 py-3"
                   >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#7DDFAD]" />
                     <div>
-                      <p className="font-medium text-slate-900">{task.title}</p>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-slate-500">
-                        {task.assignee?.full_name && <span>{task.assignee.full_name}</span>}
+                      <p className="font-medium text-white/90">{task.title}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-white/50">
+                        {task.assignee?.full_name && (
+                          <span>{task.assignee.full_name}</span>
+                        )}
                         <StatusPill status={task.status} />
                       </div>
                     </div>

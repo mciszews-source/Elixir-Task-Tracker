@@ -11,19 +11,21 @@ export function OpenTasksPanel({
   title = "Open tasks",
 }: OpenTasksPanelProps) {
   return (
-    <aside className="flex h-full flex-col rounded-2xl border border-slate-200 bg-slate-50/80">
-      <header className="border-b border-slate-200 px-5 py-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <aside className="glass-panel-strong flex h-full flex-col rounded-[14px]">
+      <header className="border-b border-white/10 px-5 py-4">
+        <h2 className="font-display text-[11px] font-bold tracking-[0.22em] text-white/55 uppercase">
           {title}
         </h2>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-[11px] text-white/40">
           Drag onto the board to prioritize
         </p>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
         {tasks.length === 0 ? (
-          <p className="text-sm text-slate-500">No open tasks right now.</p>
+          <p className="font-display text-[12px] tracking-widest text-white/30 uppercase">
+            No open tasks
+          </p>
         ) : (
           tasks.map((task) => <TaskCard key={task.id} task={task} />)
         )}

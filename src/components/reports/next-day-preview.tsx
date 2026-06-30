@@ -15,33 +15,37 @@ export function NextDayPreview({ tasks, dateLabel }: NextDayPreviewProps) {
   }, {});
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6">
+    <section className="glass-panel-strong rounded-[14px] p-6">
       <header className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">Top priorities for tomorrow</h2>
-        <p className="text-sm text-slate-500">{dateLabel}</p>
+        <h2 className="font-display text-xl font-light tracking-[0.12em] text-white">
+          Top priorities for tomorrow
+        </h2>
+        <p className="mt-1 text-sm text-white/45">{dateLabel}</p>
       </header>
 
       {tasks.length === 0 ? (
-        <p className="text-sm text-slate-500">No upcoming priorities scheduled.</p>
+        <p className="font-display text-[12px] tracking-widest text-white/30 uppercase">
+          No upcoming priorities scheduled
+        </p>
       ) : (
         <div className="space-y-6">
           {Object.entries(grouped).map(([teamName, teamTasks]) => (
             <div key={teamName}>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h3 className="font-display mb-3 text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">
                 {teamName}
               </h3>
               <ol className="space-y-2">
                 {teamTasks.map((task, index) => (
                   <li
                     key={task.id}
-                    className="flex items-start gap-3 rounded-lg border border-slate-100 px-4 py-3"
+                    className="glass-card flex items-start gap-3 rounded-[10px] px-4 py-3"
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
+                    <span className="font-display flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[rgba(74,120,196,0.4)] bg-[rgba(74,120,196,0.30)] text-[11px] font-bold text-white">
                       {index + 1}
                     </span>
                     <div>
-                      <p className="font-medium text-slate-900">{task.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="font-medium text-white/90">{task.title}</p>
+                      <p className="mt-1 text-xs text-white/45">
                         {task.assignee?.full_name ?? "Unassigned"}
                         {task.due_date && ` · Due ${formatDueDate(task.due_date)}`}
                       </p>

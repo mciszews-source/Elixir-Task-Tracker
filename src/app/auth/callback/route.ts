@@ -1,21 +1,44 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createRouteHandlerClient,
+  resolveRedirectOrigin,
+} from "@/lib/supabase/route-handler";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+function safeNextPath(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return "/";
+  }
+  return next;
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? searchParams.get("redirect") ?? "/";
+  const next = safeNextPath(
+    searchParams.get("next") ?? searchParams.get("redirect"),
+  );
+  const origin = resolveRedirectOrigin(request);
 
-  const supabase = await createClient();
+  const successUrl = new URL(next, origin);
+  let response = NextResponse.redirect(successUrl);
+  const supabase = createRouteHandlerClient(request, response);
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      console.info(
+        JSON.stringify({
+          event: "auth_callback_success",
+          at: new Date().toISOString(),
+          method: "exchangeCodeForSession",
+          redirectTo: successUrl.toString(),
+        }),
+      );
+      return response;
     }
 
     console.error(
@@ -28,19 +51,30 @@ export async function GET(request: Request) {
       }),
     );
 
-    return NextResponse.redirect(
-      `${origin}/login?error=auth&detail=${encodeURIComponent(error.message)}`,
-    );
+    const errorUrl = new URL("/login", origin);
+    errorUrl.searchParams.set("error", "auth");
+    errorUrl.searchParams.set("detail", error.message);
+    return NextResponse.redirect(errorUrl);
   }
 
   if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({
+    response = NextResponse.redirect(successUrl);
+    const otpSupabase = createRouteHandlerClient(request, response);
+    const { error } = await otpSupabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: type as EmailOtpType,
     });
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      console.info(
+        JSON.stringify({
+          event: "auth_callback_success",
+          at: new Date().toISOString(),
+          method: "verifyOtp",
+          redirectTo: successUrl.toString(),
+        }),
+      );
+      return response;
     }
 
     console.error(
@@ -53,9 +87,10 @@ export async function GET(request: Request) {
       }),
     );
 
-    return NextResponse.redirect(
-      `${origin}/login?error=auth&detail=${encodeURIComponent(error.message)}`,
-    );
+    const errorUrl = new URL("/login", origin);
+    errorUrl.searchParams.set("error", "auth");
+    errorUrl.searchParams.set("detail", error.message);
+    return NextResponse.redirect(errorUrl);
   }
 
   console.error(
@@ -68,5 +103,11 @@ export async function GET(request: Request) {
     }),
   );
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  const errorUrl = new URL("/login", origin);
+  errorUrl.searchParams.set("error", "auth");
+  errorUrl.searchParams.set(
+    "detail",
+    "Magic link was missing auth parameters. Request a new link and click it promptly.",
+  );
+  return NextResponse.redirect(errorUrl);
 }

@@ -7,10 +7,14 @@ Do **not** copy SQL from chat — dashes and quotes often get corrupted on paste
 
 | Step | File | What it does |
 |------|------|----------------|
-| 0 | `PASTE_000_verify.sql` | Sanity check (optional) |
-| 1 | `PASTE_001_schema.sql` | Core tables, RLS, triggers |
-| 2 | `PASTE_002_policies.sql` | Executive flag + admin policies |
-| 3 | `PASTE_003_seed.sql` | Prototype teams, tasks, projects (all-in-one) |
+| 0 | `PASTE_000_verify.sql` | Shows what is already done and what to run next |
+| 1 | `PASTE_001_schema.sql` | Core tables, RLS, triggers (**one-time only**) |
+| 2 | `PASTE_002_policies.sql` | Executive flag + admin policies (safe to re-run) |
+| 3 | `PASTE_003_seed.sql` | Prototype teams, tasks, projects (idempotent) |
+
+**Already ran 001 before?** Skip it. Error `type "user_role" already exists` means 001 succeeded earlier — go straight to 002, then 003.
+
+Run `PASTE_000_verify.sql` first if unsure; it reports `done = true/false` for each step.
 
 Or run 003 in four smaller steps if debugging:
 
@@ -39,6 +43,15 @@ UNION ALL SELECT 'phases', count(*) FROM project_phases WHERE external_id LIKE '
 ```
 
 Expected: 6 teams, 69 tasks, 3 projects, 29 phases.
+
+## Error: `type "user_role" already exists`
+
+**Good — 001 is already applied.** Do not run `PASTE_001_schema.sql` again.
+
+Next:
+
+1. Run `PASTE_002_policies.sql` (skip if `is_executive_request` column already exists)
+2. Run `PASTE_003_seed.sql`
 
 ## Error: `relation "the" does not exist`
 

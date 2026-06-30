@@ -66,9 +66,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS tasks_external_id_uidx
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 3. Projects gain an icon + slug column (legacy ✦ ◎ ⬡)
+--    UNIQUE on slug so ON CONFLICT (slug) works (partial indexes need WHERE in ON CONFLICT)
 -- ─────────────────────────────────────────────────────────────────────────
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS slug TEXT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.projects'::regclass
+      AND conname = 'projects_slug_key'
+  ) THEN
+    ALTER TABLE projects ADD CONSTRAINT projects_slug_key UNIQUE (slug);
+  END IF;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Keep partial index for lookups (optional; constraint above powers ON CONFLICT)
 CREATE UNIQUE INDEX IF NOT EXISTS projects_slug_uidx
   ON projects (slug)
   WHERE slug IS NOT NULL;

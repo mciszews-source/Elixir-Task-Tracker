@@ -19,6 +19,7 @@ function makeTask(
     assignee_id: null,
     due_date: null,
     is_on_board: true,
+    is_executive_request: false,
     completed_at: null,
     created_by: null,
     project_id: null,

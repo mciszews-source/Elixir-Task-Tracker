@@ -105,6 +105,10 @@ or push any commit to `main` (merging a PR counts).
 
 Watch the run — green check = live.
 
+**Required GitHub secrets (all 7 must be set or deploy fails immediately with a clear error):**
+
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_TIMEZONE`
+
 ---
 
 ## Using the live app (no terminal)

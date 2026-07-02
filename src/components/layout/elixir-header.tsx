@@ -17,10 +17,7 @@ export function ElixirHeader({ view = "departments" }: ElixirHeaderProps) {
       </div>
 
       <div className="elixir-segment">
-        <Link
-          href="/teams/ceo-office"
-          data-active={view === "departments"}
-        >
+        <Link href="/" data-active={view === "departments"}>
           Departments
         </Link>
         <Link href="/projects" data-active={view === "projects"}>

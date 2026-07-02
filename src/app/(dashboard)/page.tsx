@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/admin";
 
 export default async function HomePage() {
   if (!isSupabaseConfigured()) {
-    redirect("/teams/ceo-office");
+    redirect("/teams/operations");
   }
 
   const supabase = await createClient();
@@ -14,6 +14,6 @@ export default async function HomePage() {
     .order("sort_order")
     .limit(1);
 
-  const slug = teams?.[0]?.slug ?? "ceo-office";
+  const slug = teams?.[0]?.slug ?? "operations";
   redirect(`/teams/${slug}`);
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Team } from "@/types/database";
 import type { UserRole } from "@/types/database";
 import { canManageUsers } from "@/lib/permissions";
+import { ElixirLogo } from "@/components/ui/elixir-logo";
 
 interface SidebarProps {
   role?: UserRole;
@@ -39,7 +40,8 @@ export function Sidebar({ role = "member", userName }: SidebarProps) {
   return (
     <aside className="glass-panel relative z-20 flex w-[224px] shrink-0 flex-col border-r border-white/10">
       <div className="border-b border-white/10 px-5 py-6">
-        <p className="font-display text-[11px] font-light tracking-[0.28em] text-white/95">
+        <ElixirLogo size={64} />
+        <p className="font-display mt-3 text-[11px] font-light tracking-[0.28em] text-white/95">
           ELIXIR MD INC
         </p>
         <p className="font-display mt-1 text-[10px] tracking-[0.22em] text-white/40 uppercase">

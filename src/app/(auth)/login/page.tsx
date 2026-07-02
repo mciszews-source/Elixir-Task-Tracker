@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AUTH_DELIVERY_ADMIN_NOTE } from "@/lib/auth/constants";
 import { createClient } from "@/lib/supabase/client";
+import { ElixirLogo } from "@/components/ui/elixir-logo";
 
 type Status = "idle" | "loading" | "sent" | "error";
 
@@ -159,10 +160,8 @@ function LoginForm() {
   return (
     <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md rounded-[18px] border border-white/18 bg-[rgba(18,24,62,0.98)] p-10 shadow-2xl backdrop-blur-xl">
-        <p className="font-display text-[11px] font-light tracking-[0.25em] text-white/95">
-          ELIXIR MD INC
-        </p>
-        <h1 className="mt-3 font-display text-2xl font-light tracking-wide text-white">
+        <ElixirLogo size={104} />
+        <h1 className="mt-5 font-display text-2xl font-light tracking-wide text-white">
           Daily Task Tracker
         </h1>
         <p className="mt-2 text-sm text-white/45">

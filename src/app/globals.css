@@ -461,6 +461,29 @@ body::before {
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* ── Brand logo mark (circle staircase) ───────────────────────── */
+.elixir-logo {
+  display: block;
+  cursor: default;
+  user-select: none;
+}
+.elixir-logo-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.45s ease;
+  will-change: transform;
+}
+.elixir-logo:hover .elixir-logo-dot {
+  transform: scale(1.07);
+  opacity: 0.96;
+}
+@media (prefers-reduced-motion: reduce) {
+  .elixir-logo-dot {
+    transition: none;
+  }
+}
+
 /* ── Priority left stripes (kept from legacy) ─────────────────── */
 .task-p-critical::before { background: var(--elixir-red); }
 .task-p-high::before     { background: var(--elixir-amber); }
